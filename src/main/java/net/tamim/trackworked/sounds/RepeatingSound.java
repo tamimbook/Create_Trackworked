@@ -1,0 +1,41 @@
+package net.tamim.trackworked.sounds;
+
+import net.createmod.catnip.animation.AnimationTickHolder;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.sounds.SoundEvent;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.phys.Vec3;
+
+public class RepeatingSound {
+
+	private final SoundEvent event;
+	private final float sharedPitch;
+	private final int repeatDelay;
+	private final TrackSoundScape scape;
+	private final float relativeVolume;
+
+	public RepeatingSound(SoundEvent event, TrackSoundScape scape, float sharedPitch, float relativeVolume,
+		int repeatDelay) {
+		this.event = event;
+		this.scape = scape;
+		this.sharedPitch = sharedPitch;
+		this.relativeVolume = relativeVolume;
+		this.repeatDelay = Math.max(1, repeatDelay);
+	}
+
+	public void tick() {
+		if (AnimationTickHolder.getTicks() % repeatDelay != 0)
+			return;
+
+		ClientLevel world = Minecraft.getInstance().level;
+        // Prevent crash when exiting world
+        if (world == null) return;
+
+		Vec3 meanPos = scape.getMeanPos();
+
+		world.playLocalSound(meanPos.x, meanPos.y, meanPos.z, event, SoundSource.AMBIENT,
+			scape.getVolume() * relativeVolume, sharedPitch, true);
+	}
+
+}

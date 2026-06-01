@@ -1,0 +1,115 @@
+{
+  "suspension_creak": {
+    "subtitle": "subtitle.trackwork.suspension_creak",
+    "sounds" : [
+      {
+        "name": "trackwork:suspension_creak",
+        "type": "file"
+      }
+    ]
+  },
+  "power_wrench": {
+    "subtitle": "subtitle.trackwork.power_wrench",
+    "sounds" : [
+      {
+        "name": "trackwork:power_wrench_1",
+        "type": "file"
+      },
+      {
+        "name": "trackwork:power_wrench_2",
+        "type": "file"
+      },
+      {
+        "name": "trackwork:power_wrench_3",
+        "type": "file"
+      }
+    ]
+  },
+  "spring_tool": {
+    "subtitle": "subtitle.trackwork.spring_tool",
+    "sounds" : [
+      {
+        "name": "minecraft:block.wooden_trapdoor.open",
+        "type": "event"
+      }
+    ]
+  },
+  "track_ambient_sprocket": {
+    "subtitle": "subtitle.trackwork.ambient.track.sprocket",
+    "sounds": [
+      {
+        "name": "entity.minecart.riding",
+        "type": "event"
+      }
+    ]
+  },
+  "track_ambient_ground_1": {
+    "subtitle": "subtitle.trackwork.ambient.track.ground",
+    "sounds" : [
+      {
+        "name": "minecraft:block.netherrack.hit",
+        "type": "event"
+      }
+    ]
+  },
+  "track_ambient_ground_2": {
+    "sounds" : [
+      {
+        "name": "minecraft:block.gravel.place",
+        "type": "event"
+      }
+    ]
+  },
+  "track_ground_slip": {
+    "sounds" : [
+      {
+        "name": "trackwork:track_ground_slip",
+        "type": "file"
+      }
+    ]
+  },
+
+  "wheel_rocktoss": {
+    "sounds": [
+      {
+        "name": "trackwork:wheel_rocktoss",
+        "type": "file"
+      }
+    ]
+  },
+  "wheel_ambient_ground_1": {
+    "subtitle": "subtitle.trackwork.ambient.wheel.ground",
+    "sounds" : [
+      {
+        "name": "minecraft:block.netherrack.hit",
+        "type": "event"
+      }
+    ]
+  },
+  "wheel_ambient_ground_2": {
+    "sounds" : [
+      {
+        "name": "minecraft:block.gravel.place",
+        "type": "event"
+      }
+    ]
+  },
+  "wheel_ground_slip": {
+    "sounds" : [
+      {
+        "name": "trackwork:wheel_ground_slip",
+        "type": "file"
+      }
+    ]
+  },
+  "honk": {
+    "subtitle": "subtitle.trackwork.honk",
+    "sounds" : [
+      {
+        "name": "trackwork:honk",
+        "type": "file",
+        "attenuation_distance": 64
+      }
+    ]
+  }
+}

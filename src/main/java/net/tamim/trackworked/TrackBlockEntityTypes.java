@@ -1,0 +1,103 @@
+package net.tamim.trackworked;
+
+import com.simibubi.create.content.kinetics.base.ShaftRenderer;
+import com.tterrag.registrate.util.entry.BlockEntityEntry;
+import edn.stratodonut.trackwork.blocks.HornBlockEntity;
+import edn.stratodonut.trackwork.blocks.TrackAdjusterBlockEntity;
+import edn.stratodonut.trackwork.blocks.render.HornBlockEntityRenderer;
+import edn.stratodonut.trackwork.tracks.blocks.*;
+import edn.stratodonut.trackwork.tracks.render.OleoWheelRenderer;
+import edn.stratodonut.trackwork.tracks.render.PhysEntityTrackRenderer;
+import edn.stratodonut.trackwork.tracks.render.SimpleWheelRenderer;
+import edn.stratodonut.trackwork.tracks.render.SuspensionRenderer;
+
+import static edn.stratodonut.trackwork.TrackworkMod.REGISTRATE;
+
+public class TrackBlockEntityTypes {
+    // TODO: Instance shaders (I obviously don't know glsl :clueless:)
+
+    public static final BlockEntityEntry<SuspensionTrackBlockEntity> LARGE_SUSPENSION_TRACK = REGISTRATE
+            .blockEntity("large_suspension_track", SuspensionTrackBlockEntity::large)
+//            .instance(() -> SuspensionInstance::new, false)
+            .validBlocks(TrackBlocks.LARGE_SUSPENSION_TRACK)
+            .renderer(() -> SuspensionRenderer::new)
+            .register();
+    public static final BlockEntityEntry<SuspensionTrackBlockEntity> MED_SUSPENSION_TRACK = REGISTRATE
+            .blockEntity("med_suspension_track", SuspensionTrackBlockEntity::med)
+//            .instance(() -> SuspensionInstance::new, false)
+            .validBlocks(TrackBlocks.MED_SUSPENSION_TRACK)
+            .renderer(() -> SuspensionRenderer::new)
+            .register();
+    public static final BlockEntityEntry<SuspensionTrackBlockEntity> SUSPENSION_TRACK = REGISTRATE
+            .blockEntity("suspension_track", SuspensionTrackBlockEntity::new)
+//            .instance(() -> SuspensionInstance::new, false)
+            .validBlocks(TrackBlocks.SUSPENSION_TRACK)
+            .renderer(() -> SuspensionRenderer::new)
+            .register();
+
+    public static final BlockEntityEntry<PhysEntityTrackBlockEntity> LARGE_PHYS_TRACK = REGISTRATE
+            .blockEntity("large_phys_track", PhysEntityTrackBlockEntity::large)
+//            .instance(() -> PhysEntityTrackInstance::new, false)
+            .validBlocks(TrackBlocks.LARGE_PHYS_TRACK)
+            .renderer(() -> PhysEntityTrackRenderer::new)
+            .register();
+    public static final BlockEntityEntry<PhysEntityTrackBlockEntity> MED_PHYS_TRACK = REGISTRATE
+            .blockEntity("med_phys_track", PhysEntityTrackBlockEntity::med)
+//            .instance(() -> PhysEntityTrackInstance::new, false)
+            .validBlocks(TrackBlocks.MED_PHYS_TRACK)
+            .renderer(() -> PhysEntityTrackRenderer::new)
+            .register();
+    public static final BlockEntityEntry<PhysEntityTrackBlockEntity> PHYS_TRACK = REGISTRATE
+            .blockEntity("phys_track", PhysEntityTrackBlockEntity::new)
+//            .instance(() -> PhysEntityTrackInstance::new, false)
+            .validBlocks(TrackBlocks.PHYS_TRACK)
+            .renderer(() -> PhysEntityTrackRenderer::new)
+            .register();
+
+    public static final BlockEntityEntry<WheelBlockEntity> SIMPLE_WHEEL = REGISTRATE
+            .blockEntity("simple_wheel", WheelBlockEntity::new)
+            .validBlocks(TrackBlocks.SIMPLE_WHEEL)
+            .renderer(() -> SimpleWheelRenderer::new)
+            .register();
+
+    public static final BlockEntityEntry<WheelBlockEntity> MED_SIMPLE_WHEEL = REGISTRATE
+            .blockEntity("med_simple_wheel", WheelBlockEntity::med)
+            .validBlocks(TrackBlocks.MED_SIMPLE_WHEEL)
+            .renderer(() -> SimpleWheelRenderer::new)
+            .register();
+
+    public static final BlockEntityEntry<OleoWheelBlockEntity> OLEO_WHEEL = REGISTRATE
+            .blockEntity("oleo_wheel", OleoWheelBlockEntity.factory(0.5f, 1.5f))
+            .validBlocks(TrackBlocks.OLEO_WHEEL)
+            .renderer(() -> OleoWheelRenderer::new)
+            .register();
+
+
+
+    public static final BlockEntityEntry<WheelBlockEntity> SMALL_SIMPLE_WHEEL = REGISTRATE
+            .blockEntity("small_simple_wheel", WheelBlockEntity::small)
+            .validBlocks(TrackBlocks.SMALL_SIMPLE_WHEEL)
+            .renderer(() -> SimpleWheelRenderer::new)
+            .register();
+
+    public static final BlockEntityEntry<WheelBlockEntity> LARGE_SIMPLE_WHEEL = REGISTRATE
+            .blockEntity("large_simple_wheel", WheelBlockEntity::large)
+            .validBlocks(TrackBlocks.LARGE_SIMPLE_WHEEL)
+            .renderer(() -> SimpleWheelRenderer::new)
+            .register();
+
+
+    public static final BlockEntityEntry<TrackAdjusterBlockEntity> TRACK_LEVEL_CONTROLLER = REGISTRATE
+            .blockEntity("track_level_controller", TrackAdjusterBlockEntity::new)
+            .validBlocks(TrackBlocks.TRACK_LEVEL_CONTROLLER)
+            .renderer(() -> ShaftRenderer::new)
+            .register();
+
+    public static final BlockEntityEntry<HornBlockEntity> HORN = REGISTRATE
+            .blockEntity("horn", HornBlockEntity::new)
+            .validBlocks(TrackBlocks.HORN)
+            .renderer(() -> HornBlockEntityRenderer::new)
+            .register();
+
+    public static void register() {}
+}

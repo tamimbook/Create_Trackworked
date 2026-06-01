@@ -1,0 +1,35 @@
+package net.tamim.trackworked.stratodonut.trackwork.client;
+
+import dev.engine_room.flywheel.lib.model.baked.PartialModel;
+import edn.stratodonut.trackwork.TrackworkMod;
+
+public class TrackworkPartialModels {
+    public static final PartialModel
+            SUSPENSION_WHEEL = block("wheels"),
+            MED_SUSPENSION_WHEEL = block("med_wheels"),
+            LARGE_SUSPENSION_WHEEL = block("large_wheels"),
+            COGS = block("cogs"),
+            MED_COGS = block("med_cogs"),
+            LARGE_COGS = block("large_cogs"),
+            TRACK_LINK = block("track_link"),
+            TRACK_WRAP = block("wrapped_link"),
+            SIMPLE_WHEEL = block("simple_wheel"),
+            MED_SIMPLE_WHEEL = block("med_simple_wheel"),
+            SMALL_SIMPLE_WHEEL = block("small_simple_wheel"),
+            LARGE_SIMPLE_WHEEL = block("large_simple_wheel"),
+            SIMPLE_WHEEL_RIB = block("partial/simple_wheel_rib"),
+            SIMPLE_WHEEL_RIB_UPPER = block("partial/simple_wheel_rib_upper"),
+            SIMPLE_WHEEL_SPRING_BASE = block("partial/simple_wheel_spring_base"),
+            SIMPLE_WHEEL_SPRING_COIL = block("partial/simple_wheel_spring_coil"),
+            OLEO_WHEEL_SINGLE = block("oleo_wheel_single"),
+            OLEO_WHEEL_TWIN = block("oleo_wheel_twin"),
+            OLEO_STRUT_UPPER = block("partial/oleo_strut_upper"),
+            OLEO_STRUT_LOWER = block("partial/oleo_strut_lower"),
+            HORN_PIPE = block("partial/horn_pipe");
+
+    private static PartialModel block(String path) {
+        return PartialModel.of(TrackworkMod.getResource("block/" + path));
+    }
+
+    public static void init() {}
+}

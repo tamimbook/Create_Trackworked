@@ -1,0 +1,15 @@
+{
+  "variants": {
+    "axis=x": {
+      "model": "trackwork:block/track_level_controller",
+      "y": 90
+    },
+    "axis=y": {
+      "model": "trackwork:block/track_level_controller",
+      "x": 90
+    },
+    "axis=z": {
+      "model": "trackwork:block/track_level_controller"
+    }
+  }
+}
