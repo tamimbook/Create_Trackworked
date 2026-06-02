@@ -12,13 +12,22 @@ plugins {
 
 dependencyResolutionManagement {
     // Prefer settings-level repositories for dependency resolution, even when plugins or project scripts
-    // declare their own repositories. This ensures the RyanHCode Maven repo is used for Sable artifacts.
+    // declare their own repositories. This helps keep NeoForge/Neoform runtime artifacts and
+    // the RyanHCode Sable artifacts resolving from the intended repos.
     repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS)
     repositories {
         mavenCentral()
         maven {
             url = 'https://maven.neoforged.net/releases'
             name = 'NeoForged Releases'
+        }
+        maven {
+            url = 'https://maven.neoforged.net/mojang-meta'
+            name = 'NeoForged Mojang Meta'
+        }
+        maven {
+            url = 'https://libraries.minecraft.net'
+            name = 'Mojang Minecraft Libraries'
         }
 
         exclusiveContent {
@@ -31,6 +40,56 @@ dependencyResolutionManagement {
             filter {
                 // FIX: Matches dev.ryanhcode, dev.ryanhcode.sable, dev.ryanhcode.sable-companion, etc.
                 includeGroupByRegex("dev\\.ryanhcode.*")
+            }
+        }
+
+        exclusiveContent {
+            forRepository {
+                maven {
+                    url = "https://maven.blamejared.com"
+                    name = "BlameJared Maven"
+                }
+            }
+            filter {
+                includeGroup("foundry.veil")
+                includeGroup("gg.moonflower")
+                includeGroup("io.github.ocelot")
+            }
+        }
+
+        exclusiveContent {
+            forRepository {
+                maven {
+                    url = "https://maven.createmod.net:6085"
+                    name = "CreateMod Maven"
+                }
+            }
+            filter {
+                includeGroupByRegex("com\\.simibubi.*|dev\\.engine-room.*|net\\.createmod.*")
+            }
+        }
+
+        exclusiveContent {
+            forRepository {
+                maven {
+                    url = "https://maven.tterrag.com"
+                    name = "Tterrag Maven"
+                }
+            }
+            filter {
+                includeGroup("com.tterrag.registrate")
+            }
+        }
+
+        exclusiveContent {
+            forRepository {
+                maven {
+                    url = "https://maven.daporkchop.net"
+                    name = "DaPorkChop Maven"
+                }
+            }
+            filter {
+                includeGroup("org.valkyrienskies")
             }
         }
     }
