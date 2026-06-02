@@ -2,8 +2,8 @@ package net.tamim.trackworked.tracks.forces;
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import edn.stratodonut.trackwork.TrackworkUtil;
-import edn.stratodonut.trackwork.tracks.data.OleoWheelData;
+import net.tamim.trackworked.TrackworkUtil;
+import net.tamim.trackworked.tracks.data.OleoWheelData;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.phys.Vec3;
@@ -26,7 +26,7 @@ import java.util.Queue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
-import static edn.stratodonut.trackwork.TrackworkUtil.accumulatedVelocity;
+import static net.tamim.trackworked.TrackworkUtil.accumulatedVelocity;
 import static org.valkyrienskies.mod.common.util.VectorConversionsMCKt.toJOML;
 import static org.valkyrienskies.mod.common.util.VectorConversionsMCKt.toMinecraft;
 

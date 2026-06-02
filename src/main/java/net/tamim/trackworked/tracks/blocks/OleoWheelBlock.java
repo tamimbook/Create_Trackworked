@@ -5,7 +5,7 @@ import com.simibubi.create.api.contraption.transformable.TransformableBlock;
 import com.simibubi.create.content.contraptions.StructureTransform;
 import com.simibubi.create.content.equipment.wrench.IWrenchable;
 import com.simibubi.create.foundation.block.IBE;
-import edn.stratodonut.trackwork.TrackBlockEntityTypes;
+import net.tamim.trackworked.TrackBlockEntityTypes;
 import net.minecraft.core.Direction;
 import net.minecraft.util.StringRepresentable;
 import net.minecraft.world.InteractionResult;

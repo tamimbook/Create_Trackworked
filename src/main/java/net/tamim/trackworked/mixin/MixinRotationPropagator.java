@@ -2,8 +2,8 @@ package net.tamim.trackworked.mixin;
 
 import com.simibubi.create.content.kinetics.RotationPropagator;
 import com.simibubi.create.content.kinetics.base.KineticBlockEntity;
-import edn.stratodonut.trackwork.tracks.blocks.TrackBaseBlock;
-import edn.stratodonut.trackwork.tracks.blocks.TrackBaseBlockEntity;
+import net.tamim.trackworked.tracks.blocks.TrackBaseBlock;
+import net.tamim.trackworked.tracks.blocks.TrackBaseBlockEntity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.level.block.Block;

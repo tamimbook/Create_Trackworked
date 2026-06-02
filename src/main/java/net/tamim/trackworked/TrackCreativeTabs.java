@@ -13,7 +13,7 @@ import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.RegistryObject;
 
-import static edn.stratodonut.trackwork.TrackworkMod.REGISTRATE;
+import static net.tamim.trackworked.TrackworkMod.REGISTRATE;
 import static net.minecraft.network.chat.Component.translatable;
 
 @Mod.EventBusSubscriber(bus = Mod.EventBusSubscriber.Bus.MOD)

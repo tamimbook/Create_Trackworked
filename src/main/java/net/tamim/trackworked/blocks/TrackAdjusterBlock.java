@@ -1,8 +1,8 @@
-package net.tamim.trackworked.stratodonut.trackwork.blocks;
+package net.tamim.trackworked.blocks;
 
 import com.simibubi.create.content.kinetics.base.RotatedPillarKineticBlock;
 import com.simibubi.create.foundation.block.IBE;
-import edn.stratodonut.trackwork.TrackBlockEntityTypes;
+import net.tamim.trackworked.TrackBlockEntityTypes;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.level.LevelReader;

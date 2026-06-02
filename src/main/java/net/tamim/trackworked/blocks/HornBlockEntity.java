@@ -1,8 +1,8 @@
-package net.tamim.trackworked.stratodonut.trackwork.blocks;
+package net.tamim.trackworked.blocks;
 
 import com.simibubi.create.foundation.blockEntity.SmartBlockEntity;
 import com.simibubi.create.foundation.blockEntity.behaviour.BlockEntityBehaviour;
-import edn.stratodonut.trackwork.client.HornSoundInstance;
+import net.tamim.trackworked.client.HornSoundInstance;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;

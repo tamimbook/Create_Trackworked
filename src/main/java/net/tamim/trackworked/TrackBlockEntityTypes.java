@@ -2,16 +2,16 @@ package net.tamim.trackworked;
 
 import com.simibubi.create.content.kinetics.base.ShaftRenderer;
 import com.tterrag.registrate.util.entry.BlockEntityEntry;
-import edn.stratodonut.trackwork.blocks.HornBlockEntity;
-import edn.stratodonut.trackwork.blocks.TrackAdjusterBlockEntity;
-import edn.stratodonut.trackwork.blocks.render.HornBlockEntityRenderer;
-import edn.stratodonut.trackwork.tracks.blocks.*;
-import edn.stratodonut.trackwork.tracks.render.OleoWheelRenderer;
-import edn.stratodonut.trackwork.tracks.render.PhysEntityTrackRenderer;
-import edn.stratodonut.trackwork.tracks.render.SimpleWheelRenderer;
-import edn.stratodonut.trackwork.tracks.render.SuspensionRenderer;
+import net.tamim.trackworked.blocks.HornBlockEntity;
+import net.tamim.trackworked.blocks.TrackAdjusterBlockEntity;
+import net.tamim.trackworked.blocks.render.HornBlockEntityRenderer;
+import net.tamim.trackworked.tracks.blocks.*;
+import net.tamim.trackworked.tracks.render.OleoWheelRenderer;
+import net.tamim.trackworked.tracks.render.PhysEntityTrackRenderer;
+import net.tamim.trackworked.tracks.render.SimpleWheelRenderer;
+import net.tamim.trackworked.tracks.render.SuspensionRenderer;
 
-import static edn.stratodonut.trackwork.TrackworkMod.REGISTRATE;
+import static net.tamim.trackworked.TrackworkMod.REGISTRATE;
 
 public class TrackBlockEntityTypes {
     // TODO: Instance shaders (I obviously don't know glsl :clueless:)

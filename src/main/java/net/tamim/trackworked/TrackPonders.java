@@ -2,7 +2,7 @@ package net.tamim.trackworked;
 
 import com.tterrag.registrate.util.entry.ItemProviderEntry;
 import com.tterrag.registrate.util.entry.RegistryEntry;
-import edn.stratodonut.trackwork.tracks.TrackPonderScenes;
+import net.tamim.trackworked.tracks.TrackPonderScenes;
 import net.createmod.ponder.api.registration.PonderSceneRegistrationHelper;
 import net.minecraft.resources.ResourceLocation;
 

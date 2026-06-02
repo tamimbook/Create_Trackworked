@@ -1,10 +1,10 @@
-package net.tamim.trackworked.stratodonut.trackwork.blocks;
+package net.tamim.trackworked.blocks;
 
 import com.simibubi.create.content.kinetics.base.KineticBlockEntity;
 import com.simibubi.create.content.kinetics.base.RotatedPillarKineticBlock;
-import edn.stratodonut.trackwork.tracks.forces.OleoWheelController;
-import edn.stratodonut.trackwork.tracks.forces.PhysicsTrackController;
-import edn.stratodonut.trackwork.tracks.forces.SimpleWheelController;
+import net.tamim.trackworked.tracks.forces.OleoWheelController;
+import net.tamim.trackworked.tracks.forces.PhysicsTrackController;
+import net.tamim.trackworked.tracks.forces.SimpleWheelController;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;

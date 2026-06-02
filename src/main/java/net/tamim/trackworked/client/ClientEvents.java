@@ -1,7 +1,7 @@
-package net.tamim.trackworked.stratodonut.trackwork.client;
+package net.tamim.trackworked.client;
 
 import dev.engine_room.flywheel.api.backend.BackendManager;
-import edn.stratodonut.trackwork.sounds.TrackSoundScapes;
+import net.tamim.trackworked.sounds.TrackSoundScapes;
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.level.Level;
 import net.minecraftforge.api.distmarker.Dist;

@@ -6,7 +6,7 @@ import com.simibubi.create.foundation.item.render.CustomRenderedItemModel;
 import com.simibubi.create.foundation.item.render.CustomRenderedItemModelRenderer;
 import com.simibubi.create.foundation.item.render.PartialItemModelRenderer;
 import dev.engine_room.flywheel.lib.model.baked.PartialModel;
-import edn.stratodonut.trackwork.TrackworkMod;
+import net.tamim.trackworked.TrackworkMod;
 import net.createmod.catnip.animation.AnimationTickHolder;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.resources.model.BakedModel;

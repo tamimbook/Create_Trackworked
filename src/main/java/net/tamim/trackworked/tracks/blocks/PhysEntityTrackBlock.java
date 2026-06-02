@@ -1,6 +1,6 @@
 package net.tamim.trackworked.tracks.blocks;
 
-import edn.stratodonut.trackwork.TrackBlockEntityTypes;
+import net.tamim.trackworked.TrackBlockEntityTypes;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.item.context.UseOnContext;

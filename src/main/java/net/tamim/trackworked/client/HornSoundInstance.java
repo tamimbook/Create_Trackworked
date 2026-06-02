@@ -1,6 +1,6 @@
-package net.tamim.trackworked.stratodonut.trackwork.client;
+package net.tamim.trackworked.client;
 
-import edn.stratodonut.trackwork.TrackSounds;
+import net.tamim.trackworked.TrackSounds;
 import net.minecraft.client.resources.sounds.AbstractTickableSoundInstance;
 import net.minecraft.client.resources.sounds.SoundInstance;
 import net.minecraft.core.BlockPos;

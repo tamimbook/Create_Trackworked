@@ -1,7 +1,7 @@
 package net.tamim.trackworked.tracks.blocks;
 
 import com.simibubi.create.AllItems;
-import edn.stratodonut.trackwork.TrackBlockEntityTypes;
+import net.tamim.trackworked.TrackBlockEntityTypes;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.util.StringRepresentable;

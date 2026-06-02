@@ -1,8 +1,8 @@
 package net.tamim.trackworked.tracks.blocks.variants;
 
-import edn.stratodonut.trackwork.TrackBlockEntityTypes;
-import edn.stratodonut.trackwork.tracks.blocks.SuspensionTrackBlock;
-import edn.stratodonut.trackwork.tracks.blocks.SuspensionTrackBlockEntity;
+import net.tamim.trackworked.TrackBlockEntityTypes;
+import net.tamim.trackworked.tracks.blocks.SuspensionTrackBlock;
+import net.tamim.trackworked.tracks.blocks.SuspensionTrackBlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 
 public class LargeSuspensionTrackBlock extends SuspensionTrackBlock {

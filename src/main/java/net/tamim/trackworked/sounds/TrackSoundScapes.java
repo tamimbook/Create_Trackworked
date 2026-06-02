@@ -1,7 +1,7 @@
 package net.tamim.trackworked.sounds;
 
 import com.simibubi.create.infrastructure.config.AllConfigs;
-import edn.stratodonut.trackwork.TrackworkConfigs;
+import net.tamim.trackworked.TrackworkConfigs;
 import net.createmod.catnip.animation.AnimationTickHolder;
 import net.createmod.catnip.data.Pair;
 import net.minecraft.client.Minecraft;

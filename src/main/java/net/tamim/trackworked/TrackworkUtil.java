@@ -1,7 +1,7 @@
 package net.tamim.trackworked;
 
-import edn.stratodonut.trackwork.tracks.blocks.SuspensionTrackBlockEntity;
-import edn.stratodonut.trackwork.tracks.blocks.WheelBlockEntity;
+import net.tamim.trackworked.tracks.blocks.SuspensionTrackBlockEntity;
+import net.tamim.trackworked.tracks.blocks.WheelBlockEntity;
 import net.minecraft.core.Direction;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;

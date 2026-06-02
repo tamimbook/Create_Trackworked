@@ -1,10 +1,10 @@
 package net.tamim.trackworked;
 
 import com.simibubi.create.foundation.networking.SimplePacketBase;
-import edn.stratodonut.trackwork.tracks.network.OleoWheelPacket;
-import edn.stratodonut.trackwork.tracks.network.SimpleWheelPacket;
-import edn.stratodonut.trackwork.tracks.network.SuspensionWheelPacket;
-import edn.stratodonut.trackwork.tracks.network.ThrowTrackPacket;
+import net.tamim.trackworked.tracks.network.OleoWheelPacket;
+import net.tamim.trackworked.tracks.network.SimpleWheelPacket;
+import net.tamim.trackworked.tracks.network.SuspensionWheelPacket;
+import net.tamim.trackworked.tracks.network.ThrowTrackPacket;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.network.NetworkDirection;

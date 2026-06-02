@@ -3,11 +3,11 @@ package net.tamim.trackworked.tracks.render;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.simibubi.create.content.kinetics.base.KineticBlockEntity;
 import com.simibubi.create.content.kinetics.base.RotatedPillarKineticBlock;
-import edn.stratodonut.trackwork.client.TrackworkPartialModels;
-import edn.stratodonut.trackwork.client.TrackworkSpriteShifts;
-import edn.stratodonut.trackwork.tracks.ITrackPointProvider;
-import edn.stratodonut.trackwork.tracks.blocks.TrackBaseBlock;
-import edn.stratodonut.trackwork.tracks.blocks.TrackBaseBlockEntity;
+import net.tamim.trackworked.client.TrackworkPartialModels;
+import net.tamim.trackworked.client.TrackworkSpriteShifts;
+import net.tamim.trackworked.tracks.ITrackPointProvider;
+import net.tamim.trackworked.tracks.blocks.TrackBaseBlock;
+import net.tamim.trackworked.tracks.blocks.TrackBaseBlockEntity;
 import net.createmod.catnip.animation.AnimationTickHolder;
 import net.createmod.catnip.render.CachedBuffers;
 import net.createmod.catnip.render.SpriteShiftEntry;
@@ -18,7 +18,7 @@ import net.minecraft.core.Direction;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 
-import static edn.stratodonut.trackwork.tracks.ITrackPointProvider.PointType;
+import static net.tamim.trackworked.tracks.ITrackPointProvider.PointType;
 
 public class TrackBeltRenderer {
     public static void renderBelt(TrackBaseBlockEntity be, float partialTicks, PoseStack ms, MultiBufferSource buffer,

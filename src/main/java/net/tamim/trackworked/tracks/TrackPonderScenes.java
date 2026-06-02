@@ -1,8 +1,8 @@
 package net.tamim.trackworked.tracks;
 
 import com.simibubi.create.foundation.ponder.CreateSceneBuilder;
-import edn.stratodonut.trackwork.tracks.blocks.OleoWheelBlockEntity;
-import edn.stratodonut.trackwork.tracks.blocks.WheelBlockEntity;
+import net.tamim.trackworked.tracks.blocks.OleoWheelBlockEntity;
+import net.tamim.trackworked.tracks.blocks.WheelBlockEntity;
 import net.createmod.ponder.api.PonderPalette;
 import net.createmod.ponder.api.element.ElementLink;
 import net.createmod.ponder.api.element.WorldSectionElement;

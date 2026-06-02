@@ -1,6 +1,6 @@
-package net.tamim.trackworked.stratodonut.trackwork.client;
+package net.tamim.trackworked.client;
 
-import edn.stratodonut.trackwork.sounds.TrackSoundScapes;
+import net.tamim.trackworked.sounds.TrackSoundScapes;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.server.packs.resources.ResourceManagerReloadListener;
 

@@ -2,10 +2,10 @@ package net.tamim.trackworked.tracks.render;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.simibubi.create.foundation.blockEntity.renderer.SafeBlockEntityRenderer;
-import edn.stratodonut.trackwork.client.TrackworkPartialModels;
-import edn.stratodonut.trackwork.tracks.blocks.OleoWheelBlock;
-import edn.stratodonut.trackwork.tracks.blocks.OleoWheelBlock.VisualVariant;
-import edn.stratodonut.trackwork.tracks.blocks.OleoWheelBlockEntity;
+import net.tamim.trackworked.client.TrackworkPartialModels;
+import net.tamim.trackworked.tracks.blocks.OleoWheelBlock;
+import net.tamim.trackworked.tracks.blocks.OleoWheelBlock.VisualVariant;
+import net.tamim.trackworked.tracks.blocks.OleoWheelBlockEntity;
 import net.createmod.catnip.render.CachedBuffers;
 import net.createmod.catnip.render.SuperByteBuffer;
 import net.minecraft.client.renderer.MultiBufferSource;

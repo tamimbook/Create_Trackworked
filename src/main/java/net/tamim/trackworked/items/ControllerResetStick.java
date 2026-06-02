@@ -1,6 +1,6 @@
 package net.tamim.trackworked.items;
 
-import edn.stratodonut.trackwork.tracks.forces.PhysEntityTrackController;
+import net.tamim.trackworked.tracks.forces.PhysEntityTrackController;
 import net.minecraft.network.chat.ComponentContents;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.world.InteractionResult;

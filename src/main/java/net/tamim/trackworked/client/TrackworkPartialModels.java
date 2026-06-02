@@ -1,7 +1,7 @@
-package net.tamim.trackworked.stratodonut.trackwork.client;
+package net.tamim.trackworked.client;
 
 import dev.engine_room.flywheel.lib.model.baked.PartialModel;
-import edn.stratodonut.trackwork.TrackworkMod;
+import net.tamim.trackworked.TrackworkMod;
 
 public class TrackworkPartialModels {
     public static final PartialModel

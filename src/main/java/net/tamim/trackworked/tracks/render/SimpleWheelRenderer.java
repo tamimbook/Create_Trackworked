@@ -2,10 +2,10 @@ package net.tamim.trackworked.tracks.render;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.simibubi.create.content.kinetics.base.KineticBlockEntityRenderer;
-import edn.stratodonut.trackwork.TrackworkConfigs;
-import edn.stratodonut.trackwork.client.TrackworkPartialModels;
-import edn.stratodonut.trackwork.tracks.blocks.WheelBlock;
-import edn.stratodonut.trackwork.tracks.blocks.WheelBlockEntity;
+import net.tamim.trackworked.TrackworkConfigs;
+import net.tamim.trackworked.client.TrackworkPartialModels;
+import net.tamim.trackworked.tracks.blocks.WheelBlock;
+import net.tamim.trackworked.tracks.blocks.WheelBlockEntity;
 import net.createmod.catnip.animation.AnimationTickHolder;
 import net.createmod.catnip.render.CachedBuffers;
 import net.createmod.catnip.render.SuperByteBuffer;

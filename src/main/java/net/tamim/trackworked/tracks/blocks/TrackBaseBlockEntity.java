@@ -2,12 +2,12 @@ package net.tamim.trackworked.tracks.blocks;
 
 import com.mojang.datafixers.util.Pair;
 import com.simibubi.create.content.kinetics.base.KineticBlockEntity;
-import edn.stratodonut.trackwork.TrackPackets;
-import edn.stratodonut.trackwork.TrackworkUtil;
-import edn.stratodonut.trackwork.tracks.ITrackPointProvider;
-import edn.stratodonut.trackwork.tracks.blocks.TrackBaseBlock.TrackPart;
-import edn.stratodonut.trackwork.tracks.network.ThrowTrackPacket;
-import edn.stratodonut.trackwork.tracks.render.TrackBeltRenderer;
+import net.tamim.trackworked.TrackPackets;
+import net.tamim.trackworked.TrackworkUtil;
+import net.tamim.trackworked.tracks.ITrackPointProvider;
+import net.tamim.trackworked.tracks.blocks.TrackBaseBlock.TrackPart;
+import net.tamim.trackworked.tracks.network.ThrowTrackPacket;
+import net.tamim.trackworked.tracks.render.TrackBeltRenderer;
 import net.createmod.catnip.data.Iterate;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -21,7 +21,7 @@ import org.jetbrains.annotations.NotNull;
 import javax.annotation.Nullable;
 
 import static com.simibubi.create.content.kinetics.base.RotatedPillarKineticBlock.AXIS;
-import static edn.stratodonut.trackwork.tracks.blocks.TrackBaseBlock.PART;
+import static net.tamim.trackworked.tracks.blocks.TrackBaseBlock.PART;
 
 public abstract class TrackBaseBlockEntity extends KineticBlockEntity implements ITrackPointProvider {
     private boolean detracked = false;

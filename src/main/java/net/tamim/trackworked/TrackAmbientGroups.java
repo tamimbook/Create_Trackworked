@@ -1,7 +1,7 @@
 package net.tamim.trackworked;
 
-import edn.stratodonut.trackwork.sounds.AmbientGroup;
-import edn.stratodonut.trackwork.sounds.TrackSoundScape;
+import net.tamim.trackworked.sounds.AmbientGroup;
+import net.tamim.trackworked.sounds.TrackSoundScape;
 
 public class TrackAmbientGroups {
     public static AmbientGroup TRACK_GROUND_AMBIENT = new AmbientGroup((p, g) -> new TrackSoundScape(p, g)

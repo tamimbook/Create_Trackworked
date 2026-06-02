@@ -2,7 +2,7 @@ package net.tamim.trackworked.tracks.data;
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import edn.stratodonut.trackwork.TrackworkUtil;
+import net.tamim.trackworked.TrackworkUtil;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import org.joml.Vector3d;

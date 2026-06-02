@@ -1,6 +1,6 @@
-package net.tamim.trackworked.stratodonut.trackwork.client;
+package net.tamim.trackworked.client;
 
-import edn.stratodonut.trackwork.TrackworkMod;
+import net.tamim.trackworked.TrackworkMod;
 import net.createmod.catnip.render.SpriteShiftEntry;
 import net.createmod.catnip.render.SpriteShifter;
 

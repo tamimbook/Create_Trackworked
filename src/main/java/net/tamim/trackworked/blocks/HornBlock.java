@@ -1,7 +1,7 @@
-package net.tamim.trackworked.stratodonut.trackwork.blocks;
+package net.tamim.trackworked.blocks;
 
 import com.simibubi.create.foundation.block.IBE;
-import edn.stratodonut.trackwork.TrackBlockEntityTypes;
+import net.tamim.trackworked.TrackBlockEntityTypes;
 import net.createmod.catnip.math.VoxelShaper;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;

@@ -1,12 +1,12 @@
 package net.tamim.trackworked.tracks.blocks;
 
 import com.simibubi.create.infrastructure.config.AllConfigs;
-import edn.stratodonut.trackwork.*;
-import edn.stratodonut.trackwork.sounds.TrackSoundScapes;
-import edn.stratodonut.trackwork.tracks.ITrackPointProvider;
-import edn.stratodonut.trackwork.tracks.data.PhysTrackData;
-import edn.stratodonut.trackwork.tracks.forces.PhysicsTrackController;
-import edn.stratodonut.trackwork.tracks.network.SuspensionWheelPacket;
+import net.tamim.trackworked.*;
+import net.tamim.trackworked.sounds.TrackSoundScapes;
+import net.tamim.trackworked.tracks.ITrackPointProvider;
+import net.tamim.trackworked.tracks.data.PhysTrackData;
+import net.tamim.trackworked.tracks.forces.PhysicsTrackController;
+import net.tamim.trackworked.tracks.network.SuspensionWheelPacket;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.particles.BlockParticleOption;
@@ -43,9 +43,9 @@ import java.util.Random;
 import java.util.function.Supplier;
 
 import static com.simibubi.create.content.kinetics.base.RotatedPillarKineticBlock.AXIS;
-import static edn.stratodonut.trackwork.TrackSounds.SUSPENSION_CREAK;
-import static edn.stratodonut.trackwork.TrackworkUtil.accumulatedVelocity;
-import static edn.stratodonut.trackwork.tracks.forces.PhysicsTrackController.UP;
+import static net.tamim.trackworked.TrackSounds.SUSPENSION_CREAK;
+import static net.tamim.trackworked.TrackworkUtil.accumulatedVelocity;
+import static net.tamim.trackworked.tracks.forces.PhysicsTrackController.UP;
 import static org.valkyrienskies.mod.common.util.VectorConversionsMCKt.toJOML;
 import static org.valkyrienskies.mod.common.util.VectorConversionsMCKt.toMinecraft;
 

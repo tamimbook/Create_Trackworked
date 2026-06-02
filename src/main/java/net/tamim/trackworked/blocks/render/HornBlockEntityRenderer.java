@@ -1,10 +1,10 @@
-package net.tamim.trackworked.stratodonut.trackwork.blocks.render;
+package net.tamim.trackworked.blocks.render;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.simibubi.create.foundation.blockEntity.renderer.SafeBlockEntityRenderer;
-import edn.stratodonut.trackwork.blocks.HornBlock;
-import edn.stratodonut.trackwork.blocks.HornBlockEntity;
-import edn.stratodonut.trackwork.client.TrackworkPartialModels;
+import net.tamim.trackworked.blocks.HornBlock;
+import net.tamim.trackworked.blocks.HornBlockEntity;
+import net.tamim.trackworked.client.TrackworkPartialModels;
 import net.createmod.catnip.render.CachedBuffers;
 import net.createmod.catnip.render.SuperByteBuffer;
 import net.minecraft.client.renderer.MultiBufferSource;

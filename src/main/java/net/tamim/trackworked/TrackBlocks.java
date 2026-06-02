@@ -8,16 +8,16 @@ import com.simibubi.create.foundation.data.BlockStateGen;
 import com.simibubi.create.foundation.data.CreateRegistrate;
 import com.simibubi.create.foundation.data.SharedProperties;
 import com.tterrag.registrate.util.entry.BlockEntry;
-import edn.stratodonut.trackwork.blocks.HornBlock;
-import edn.stratodonut.trackwork.blocks.TrackAdjusterBlock;
-import edn.stratodonut.trackwork.tracks.blocks.OleoWheelBlock;
-import edn.stratodonut.trackwork.tracks.blocks.PhysEntityTrackBlock;
-import edn.stratodonut.trackwork.tracks.blocks.SuspensionTrackBlock;
-import edn.stratodonut.trackwork.tracks.blocks.WheelBlock;
-import edn.stratodonut.trackwork.tracks.blocks.variants.LargePhysEntityTrackBlock;
-import edn.stratodonut.trackwork.tracks.blocks.variants.LargeSuspensionTrackBlock;
-import edn.stratodonut.trackwork.tracks.blocks.variants.MedPhysEntityTrackBlock;
-import edn.stratodonut.trackwork.tracks.blocks.variants.MedSuspensionTrackBlock;
+import net.tamim.trackworked.blocks.HornBlock;
+import net.tamim.trackworked.blocks.TrackAdjusterBlock;
+import net.tamim.trackworked.tracks.blocks.OleoWheelBlock;
+import net.tamim.trackworked.tracks.blocks.PhysEntityTrackBlock;
+import net.tamim.trackworked.tracks.blocks.SuspensionTrackBlock;
+import net.tamim.trackworked.tracks.blocks.WheelBlock;
+import net.tamim.trackworked.tracks.blocks.variants.LargePhysEntityTrackBlock;
+import net.tamim.trackworked.tracks.blocks.variants.LargeSuspensionTrackBlock;
+import net.tamim.trackworked.tracks.blocks.variants.MedPhysEntityTrackBlock;
+import net.tamim.trackworked.tracks.blocks.variants.MedSuspensionTrackBlock;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.block.Blocks;
@@ -33,7 +33,7 @@ import org.jetbrains.annotations.NotNull;
 import static com.simibubi.create.foundation.data.ModelGen.customItemModel;
 import static com.simibubi.create.foundation.data.TagGen.axeOrPickaxe;
 import static com.simibubi.create.foundation.data.TagGen.pickaxeOnly;
-import static edn.stratodonut.trackwork.TrackworkMod.REGISTRATE;
+import static net.tamim.trackworked.TrackworkMod.REGISTRATE;
 
 public class TrackBlocks {
     static {

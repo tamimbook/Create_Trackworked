@@ -3,9 +3,9 @@ package net.tamim.trackworked;
 import com.simibubi.create.AllCreativeModeTabs;
 import com.simibubi.create.foundation.data.AssetLookup;
 import com.tterrag.registrate.util.entry.ItemEntry;
-import edn.stratodonut.trackwork.items.TrackToolkit;
+import net.tamim.trackworked.items.TrackToolkit;
 
-import static edn.stratodonut.trackwork.TrackworkMod.REGISTRATE;
+import static net.tamim.trackworked.TrackworkMod.REGISTRATE;
 
 public class TrackworkItems {
     static {

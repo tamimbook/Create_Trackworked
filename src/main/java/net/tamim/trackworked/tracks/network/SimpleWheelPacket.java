@@ -1,7 +1,7 @@
 package net.tamim.trackworked.tracks.network;
 
 import com.simibubi.create.foundation.networking.BlockEntityDataPacket;
-import edn.stratodonut.trackwork.tracks.blocks.WheelBlockEntity;
+import net.tamim.trackworked.tracks.blocks.WheelBlockEntity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 
