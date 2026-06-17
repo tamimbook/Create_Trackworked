@@ -3,8 +3,8 @@
 	"parent": "block/block",
 	"texture_size": [32, 32],
 	"textures": {
-		"0": "trackwork:item/kit/power_wrench",
-		"particle": "trackwork:item/kit/power_wrench"
+		"0": "trackworked:item/kit/power_wrench",
+		"particle": "trackworked:item/kit/power_wrench"
 	},
 	"elements": [
 		{

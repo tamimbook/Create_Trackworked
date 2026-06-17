@@ -3,7 +3,6 @@ package net.tamim.trackworked.tracks.data;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import org.joml.Vector3dc;
-import org.valkyrienskies.core.api.util.PhysTickOnly;
 
 import javax.annotation.Nullable;
 
@@ -18,7 +17,6 @@ public class OleoWheelData {
     public float wheelRPM;
     public boolean isFreespin;
 
-    @PhysTickOnly
     @Nullable
     public Vector3dc lastSuspensionForce;
 

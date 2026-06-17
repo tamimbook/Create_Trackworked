@@ -2,7 +2,7 @@ package net.tamim.trackworked.tracks.blocks;
 
 import com.mojang.datafixers.util.Pair;
 import com.simibubi.create.content.kinetics.base.KineticBlockEntity;
-import net.tamim.trackworked.TrackPackets;
+import net.createmod.catnip.platform.CatnipServices;
 import net.tamim.trackworked.TrackworkUtil;
 import net.tamim.trackworked.tracks.ITrackPointProvider;
 import net.tamim.trackworked.tracks.blocks.TrackBaseBlock.TrackPart;
@@ -11,7 +11,10 @@ import net.tamim.trackworked.tracks.render.TrackBeltRenderer;
 import net.createmod.catnip.data.Iterate;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
@@ -72,7 +75,9 @@ public abstract class TrackBaseBlockEntity extends KineticBlockEntity implements
             }
         }
 
-        TrackPackets.getChannel().send(packetTarget(), new ThrowTrackPacket(this.getBlockPos(), this.detracked));
+        if (world instanceof ServerLevel serverLevel)
+            CatnipServices.NETWORK.sendToClientsTrackingChunk(serverLevel, new ChunkPos(this.getBlockPos()),
+                    new ThrowTrackPacket(this.getBlockPos(), this.detracked));
     }
 
     private @Nullable BlockPos nextTrackPosition(BlockState state, BlockPos pos, boolean forward) {
@@ -91,15 +96,15 @@ public abstract class TrackBaseBlockEntity extends KineticBlockEntity implements
     }
 
     @Override
-    public void write(CompoundTag compound, boolean clientPacket) {
+    public void write(CompoundTag compound, HolderLookup.Provider registries, boolean clientPacket) {
         compound.putBoolean("Detracked", this.detracked);
-        super.write(compound, clientPacket);
+        super.write(compound, registries, clientPacket);
     }
 
     @Override
-    protected void read(CompoundTag compound, boolean clientPacket) {
+    protected void read(CompoundTag compound, HolderLookup.Provider registries, boolean clientPacket) {
         if (compound.contains("Detracked")) this.detracked = compound.getBoolean("Detracked");
-        super.read(compound, clientPacket);
+        super.read(compound, registries, clientPacket);
     }
 
     public void handlePacket(ThrowTrackPacket p) {

@@ -5,7 +5,7 @@ import com.simibubi.create.foundation.data.AssetLookup;
 import com.tterrag.registrate.util.entry.ItemEntry;
 import net.tamim.trackworked.items.TrackToolkit;
 
-import static net.tamim.trackworked.TrackworkMod.REGISTRATE;
+import static net.tamim.trackworked.TrackworkedMod.REGISTRATE;
 
 public class TrackworkItems {
     static {

@@ -1,57 +1,50 @@
 package net.tamim.trackworked.tracks.forces;
 
-import com.fasterxml.jackson.annotation.JsonAutoDetect;
-import com.fasterxml.jackson.annotation.JsonIgnore;
+import dev.ryanhcode.sable.api.physics.handle.RigidBodyHandle;
+import dev.ryanhcode.sable.api.physics.mass.MassData;
+import dev.ryanhcode.sable.companion.math.Pose3dc;
+import dev.ryanhcode.sable.sublevel.ServerSubLevel;
 import net.tamim.trackworked.TrackworkUtil;
 import net.tamim.trackworked.tracks.data.OleoWheelData;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Direction;
-import net.minecraft.world.phys.Vec3;
-import org.jetbrains.annotations.NotNull;
+import org.joml.Math;
 import org.joml.Vector3d;
 import org.joml.Vector3dc;
 import org.joml.Vector3f;
-import org.valkyrienskies.core.api.bodies.properties.BodyKinematics;
-import org.valkyrienskies.core.api.ships.LoadedServerShip;
-import org.valkyrienskies.core.api.ships.PhysShip;
-import org.valkyrienskies.core.api.ships.ShipPhysicsListener;
-import org.valkyrienskies.core.api.ships.properties.ShipTransform;
-import org.valkyrienskies.core.api.world.PhysLevel;
 
 import javax.annotation.Nonnull;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Objects;
-import java.util.Queue;
+import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedQueue;
 
-import static net.tamim.trackworked.TrackworkUtil.accumulatedVelocity;
-import static org.valkyrienskies.mod.common.util.VectorConversionsMCKt.toJOML;
-import static org.valkyrienskies.mod.common.util.VectorConversionsMCKt.toMinecraft;
+/**
+ * Per-sub-level controller for {@code oleo_wheel} (landing gear) blocks.
+ *
+ * <p>Phase D: a stiff oleo-pneumatic strut — firm spring, asymmetric damper (firm in compression,
+ * soft on rebound), steering, and lateral grip. Undriven (free-rolling), so it absorbs landings and
+ * resists sideways slide rather than propelling. Stowed gear (suspension scale 0) applies no force.
+ * Each wheel applies its impulse immediately (no shared 5g net-clamp), matching the VS2 model.</p>
+ */
+public final class OleoWheelController {
+    public static final double RPM_TO_RADS = 0.10471975512;
+    public static final double MAXIMUM_SLIP = 10;
+    public static final double MAXIMUM_SLIP_LATERAL = MAXIMUM_SLIP * 1.5;
+    public static final double MAX_FREESPIN_SLIP = 0.07;
+    public static final double MAXIMUM_G = 98.1 * 5;
+    public static final Vector3dc UP = new Vector3d(0, 1, 0);
 
-@JsonAutoDetect(
-        fieldVisibility = JsonAutoDetect.Visibility.ANY
-)
-public final class OleoWheelController implements ShipPhysicsListener {
-    @JsonIgnore
-    public static double RPM_TO_RADS = 0.10471975512;
-    @JsonIgnore
-    public static double MAXIMUM_SLIP = 10;
-    @JsonIgnore
-    public static double MAXIMUM_SLIP_LATERAL = MAXIMUM_SLIP * 1.5;
-    @JsonIgnore
-    public static double MAX_FREESPIN_SLIP = 0.07;
-    @JsonIgnore
-    public static double MAXIMUM_G = 98.1*5;
-    public static Vector3dc UP = new Vector3d(0, 1, 0);
-    private HashMap<Long, OleoWheelData> wheelData = new HashMap<>();
-    @JsonIgnore
+    /** Stiff oleo spring gain. */
+    private static final double SPRING_GAIN = 4.0;
+    /** Oleo damper gain. */
+    private static final double DAMPER_GAIN = 1.0;
+    /** Rebound damping is softer than compression. */
+    private static final double REBOUND_FACTOR = 0.5;
+    private static final double GRIP_GAIN = 1.0;
+
+    private static final Map<UUID, OleoWheelController> INSTANCES = new ConcurrentHashMap<>();
+
+    private final ConcurrentHashMap<Long, OleoWheelData> wheelUpdateData = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<Long, TrackworkUtil.ClipResult> suspensionData = new ConcurrentHashMap<>();
-
-    @JsonIgnore
-    private ConcurrentHashMap<Long, OleoWheelData> wheelUpdateData = new ConcurrentHashMap<>();
-    private ConcurrentLinkedQueue<Long> removedWheels = new ConcurrentLinkedQueue<>();
 
     private volatile Vector3dc suspensionAdjust = new Vector3d(0, 1, 0);
     private volatile float suspensionStiffness = 1.0f;
@@ -59,197 +52,123 @@ public final class OleoWheelController implements ShipPhysicsListener {
 
     public OleoWheelController() {}
 
-    public static OleoWheelController getOrCreate(LoadedServerShip ship) {
-        return ship.getOrPutAttachment(OleoWheelController.class, OleoWheelController::new);
+    public static OleoWheelController getOrCreate(ServerSubLevel subLevel) {
+        return INSTANCES.computeIfAbsent(subLevel.getUniqueId(), $ -> new OleoWheelController());
     }
 
-    @Override
-    public void physTick(@NotNull PhysShip physShip, @NotNull PhysLevel physLevel) {
-        this.wheelUpdateData.forEach((id, data) -> {
-            this.wheelData.merge(id, data, OleoWheelData::updateWith);
-        });
-        this.wheelUpdateData.clear();
-
-        // Idk why, but sometimes removing a block can send an update in the same tick(?), so this is last.
-        while(!removedWheels.isEmpty()) {
-            Long removeId = this.removedWheels.remove();
-            this.wheelData.remove(removeId);
+    /** Per-substep oleo-strut force application for a single landing-gear wheel. */
+    public void physicsTick(ServerSubLevel sub, RigidBodyHandle handle, BlockPos pos, double dt) {
+        OleoWheelData u = wheelUpdateData.get(pos.asLong());
+        if (u == null || !handle.isValid()) return;
+        if (u.susScaled == 0) { // stowed
+            suspensionData.put(pos.asLong(), TrackworkUtil.ClipResult.MISS);
+            return;
         }
 
-        if (this.wheelData.isEmpty()) return;
-
-        double coefficientOfPower = Math.min(2.0d, 3d / this.wheelData.size());
-
-        this.wheelData.forEach((id, data) -> {
-            ComputeResult result = computeForce(data, physShip, physLevel, coefficientOfPower);
-            this.suspensionData.put(id, result.clipResult);
-            if (result.linearForce.isFinite()) physShip.applyWorldForce(result.linearForce, physShip.getTransform().getPositionInWorld());
-            if (result.torque.isFinite()) physShip.applyWorldTorque(result.torque);
-        });
-    }
-
-    private record ComputeResult(Vector3dc linearForce, Vector3dc torque, TrackworkUtil.ClipResult clipResult) {}
-
-    private ComputeResult computeForce(OleoWheelData data, PhysShip ship, PhysLevel physLevel, double coefficientOfPower) {
-        if (data.susScaled == 0) {
-            data.lastSuspensionForce = null;
-            return new ComputeResult(new Vector3d(), new Vector3d(), TrackworkUtil.ClipResult.MISS);
+        MassData massData = sub.getMassTracker();
+        if (massData == null || massData.isInvalid()) {
+            suspensionData.put(pos.asLong(), TrackworkUtil.ClipResult.MISS);
+            return;
         }
+        double m = massData.getMass();
+        if (m <= 0) return;
+        Vector3dc comLocal = massData.getCenterOfMass();
+        Pose3dc pose = sub.logicalPose();
 
-        Direction.Axis axis = data.wheelAxis;
-        float steeringValue = data.steeringValue;
-        float axialOffset = data.axialOffset;
-        float horizontalOffset = data.horizontalOffset;
-        double susScaled = data.susScaled;
-        double restOffset = data.wheelRadius - 0.5;
-        BodyKinematics pose = ship.getKinematics();
-        ShipTransform shipTransform = ship.getTransform();
-        double m =  ship.getMass();
-        Vector3dc localUp = shipTransform.getShipToWorldRotation().transform(UP, new Vector3d());
-        double gravity_factor = org.joml.Math.max(0.3, localUp.dot(UP));
-        Vec3 start = BlockPos.of(data.blockPos).getCenter();
+        double R = u.wheelRadius;
+        double restOffset = R - 0.5;
+        double susScaled = u.susScaled;
+        double count = Math.max(1.0, wheelUpdateData.size());
+        double coP = Math.min(2.0, 3.0 / count);
 
-        Vec3 worldSpaceNormal = toMinecraft(ship.getTransform().getShipToWorldRotation().transform(toJOML(TrackworkUtil.getActionNormal(axis)), new Vector3d()).mul(susScaled + 0.5));
-        Vec3 worldSpaceStart = toMinecraft(ship.getShipToWorld().transformPosition(toJOML(start.add(0, -restOffset, 0))));
+        Vector3d mountLocal = new Vector3d(pos.getX() + 0.5, pos.getY() + 0.5 - restOffset, pos.getZ() + 0.5);
+        Vector3d worldStart = pose.transformPosition(mountLocal, new Vector3d());
+        Vector3d worldDown = pose.transformNormal(new Vector3d(0, -1, 0), new Vector3d());
+        if (worldDown.lengthSquared() < 1.0e-9) return;
+        worldDown.normalize();
+        Vector3d worldUp = new Vector3d(worldDown).negate();
 
-        Vec3 worldSpaceOffset = toMinecraft(
-                ship.getTransform().getShipToWorldRotation().transform(
-                        TrackworkUtil.getForwardVec3d(axis, 1).mul(horizontalOffset)
-                                .add(TrackworkUtil.getAxisAsVec(axis).mul(axialOffset)), new Vector3d()));
+        Vector3d forwardLocal = TrackworkUtil.getForwardVec3d(u.wheelAxis, 1f)
+                .rotateAxis(u.steeringValue * Math.toRadians(30.0), 0, 1, 0);
+        Vector3d driveForwardWorld = pose.transformNormal(forwardLocal, new Vector3d());
 
-        Vector3dc forceVec;
-        TrackworkUtil.ClipResult clipResult = TrackworkUtil.clipAndResolvePhys(physLevel, ship,
-                TrackworkUtil.getAxisAsVec(axis).rotateAxis(steeringValue * org.joml.Math.toRadians(30), 0, 1, 0),
-                toJOML(worldSpaceStart.add(worldSpaceOffset)), toJOML(worldSpaceNormal),
-                data.wheelRadius, 2, ship.getId());
-        forceVec = clipResult.trackTangent().mul(data.wheelRadius / 0.5, new Vector3d());
+        double maxLen = susScaled + 0.5 + R;
+        TrackworkUtil.ClipResult clip = TrackPhysics.clipGround(sub, worldStart, worldDown, maxLen, driveForwardWorld);
+        suspensionData.put(pos.asLong(), clip);
+        if (clip == TrackworkUtil.ClipResult.MISS || clip.suspensionLength() == null) return;
 
-        double suspensionTravel = clipResult.equals(TrackworkUtil.ClipResult.MISS) ? susScaled : clipResult.suspensionLength().length() - 0.5;
-        Vector3dc suspensionForce = toJOML(worldSpaceNormal.scale( (susScaled - suspensionTravel))).negate();
-        boolean isOnGround = !clipResult.equals(TrackworkUtil.ClipResult.MISS);
+        double hitDist = clip.suspensionLength().length();
+        double compression = susScaled - (hitDist - R);
+        if (compression <= 0) return;
+        compression = Math.min(compression, susScaled);
 
-        Vector3dc wheelContactPosition = toJOML(worldSpaceStart.add(worldSpaceOffset));
-        Vector3dc wheelNormal = toJOML(worldSpaceNormal);
+        Vector3d contactWorld = new Vector3d(worldStart).add(clip.suspensionLength());
+        Vector3d comWorld = TrackPhysics.centerOfMassWorld(pose, comLocal, new Vector3d());
+        Vector3d vAtP = TrackPhysics.velocityAtPoint(handle, comWorld, contactWorld, new Vector3d());
+        if (clip.groundVelocity() != null) vAtP.sub(clip.groundVelocity());
 
-        Vector3dc trackRelPosShip = toJOML(start).sub(shipTransform.getPositionInShip(), new Vector3d());
-        Vector3d tForce = new Vector3d(); //data.trackSpeed;
-        Vector3dc trackNormal = wheelNormal.normalize(new Vector3d());
-        Vector3dc trackSurface = forceVec.mul(data.wheelRPM * RPM_TO_RADS * 0.5, new Vector3d());
-        Vector3dc velocityAtPosition = accumulatedVelocity(shipTransform, pose, wheelContactPosition);
-        if (isOnGround) {
-            velocityAtPosition = velocityAtPosition.sub(clipResult.groundVelocity(), new Vector3d());
-        }
+        double gravityFactor = Math.max(0.3, worldUp.dot(UP));
+        Vector3d tForce = new Vector3d();
 
-        double suspensionCompressionDelta = 0f;
-        if (data.lastSuspensionForce != null) {
-            suspensionCompressionDelta = suspensionForce.sub(data.lastSuspensionForce, new Vector3d()).length();
-        }
-        data.lastSuspensionForce = suspensionForce;
+        // Stiff spring.
+        double springMag = m * SPRING_GAIN * coP * suspensionStiffness * compression;
+        tForce.fma(springMag, worldUp);
 
-        // Suspension
-        if (isOnGround) {
-            double suspensionDelta = velocityAtPosition.dot(trackNormal) + suspensionCompressionDelta;
-            double tilt = 1 + this.tilt(trackRelPosShip);
+        // Asymmetric oleo damper: firm in compression, soft on rebound.
+        double compressionRate = -vAtP.dot(worldUp);
+        double damperMag = m * DAMPER_GAIN * coP * suspensionDampening * compressionRate;
+        if (compressionRate < 0) damperMag *= REBOUND_FACTOR;
+        tForce.fma(damperMag, worldUp);
 
-            // Spring force (stiffness) - apply in world coordinates but calculated relative to local up
-            Vector3dc springForce = suspensionForce.mul(m * 4.0 * coefficientOfPower * this.suspensionStiffness * tilt, new Vector3d());
-            tForce.add(springForce);
+        // Drive + grip (undriven gear -> mostly lateral grip).
+        double trackSurface = u.wheelRPM * RPM_TO_RADS * R;
+        Vector3dc tangent = clip.trackTangent();
+        Vector3d surfaceVel = new Vector3d(vAtP);
+        surfaceVel.fma(-surfaceVel.dot(worldUp), worldUp);
+        Vector3d slip = new Vector3d(tangent).mul(trackSurface).sub(surfaceVel);
+        double longMag = slip.dot(tangent);
+        Vector3d longSlip = new Vector3d(tangent).mul(longMag);
+        Vector3d latSlip = new Vector3d(slip).sub(longSlip);
+        TrackPhysics.clampLength(longSlip, u.isFreespin ? MAX_FREESPIN_SLIP : MAXIMUM_SLIP);
+        TrackPhysics.clampLength(latSlip, MAXIMUM_SLIP_LATERAL);
+        Vector3d gripSlip = (u.wheelRPM == 0f && u.isFreespin) ? latSlip : new Vector3d(longSlip).add(latSlip);
+        tForce.fma(m * GRIP_GAIN * coP * gravityFactor, gripSlip);
 
-            // Less damper downward
-            double damperMagnitude = m * -suspensionDelta * coefficientOfPower * this.suspensionDampening;
-            if (damperMagnitude > 0) {
-                damperMagnitude *= 0.5;
-            }
-
-            // Damper force (dampening) - apply in world coordinates but calculated relative to local up
-            Vector3dc damperForce = trackNormal.mul(damperMagnitude, new Vector3d());
-            tForce.add(damperForce);
-            // Really half-assed antislip when the spring is stronger than friction (what?)
-            if (data.wheelRPM == 0) {
-                tForce = new Vector3d(0, tForce.y(), 0);
-            }
-        }
-
-        if (isOnGround || trackSurface.lengthSquared() > 0) {
-            // Torque
-            Vector3dc surfaceVelocity = velocityAtPosition.sub(trackNormal.mul(velocityAtPosition.dot(trackNormal), new Vector3d()), new Vector3d());
-            Vector3dc slipVelocity = trackSurface.sub(surfaceVelocity, new Vector3d());
-
-            // driveForceVector can be zero!
-            Vector3dc driveDir = forceVec.normalize(new Vector3d());
-            Vector3dc driveSlip = driveDir.mul(driveDir.dot(slipVelocity), new Vector3d());
-            Vector3dc lateralSlip = slipVelocity.sub(driveSlip, new Vector3d());
-
-            // TODO: A better Tyre model like Pacoianowfa 98?
-            if (isOnGround) {
-                if (data.isFreespin) {
-                    slipVelocity = driveSlip.normalize(org.joml.Math.min(driveSlip.length(), MAX_FREESPIN_SLIP), new Vector3d())
-                            .add(lateralSlip.normalize(org.joml.Math.min(lateralSlip.length(), MAXIMUM_SLIP_LATERAL), new Vector3d()));
-                } else {
-                    slipVelocity = driveSlip.normalize(org.joml.Math.min(driveSlip.length(), MAXIMUM_SLIP), new Vector3d())
-                            .add(lateralSlip.normalize(org.joml.Math.min(lateralSlip.length(), MAXIMUM_SLIP_LATERAL), new Vector3d()), new Vector3d());
-                }
-                tForce.add(slipVelocity.mul(1.0 * m * coefficientOfPower * gravity_factor, new Vector3d()));
-            } else if (!data.isFreespin && forceVec.length() != 0) {
-                slipVelocity = driveSlip.normalize(org.joml.Math.min(driveSlip.length(), MAXIMUM_SLIP), new Vector3d());
-                tForce.add(slipVelocity.mul(1.0 * m * coefficientOfPower * gravity_factor, new Vector3d()));
-            }
-        }
-
-        Vector3dc trackRelPos = shipTransform.getShipToWorldRotation().transform(trackRelPosShip, new Vector3d());//worldSpaceTrackOrigin.sub(shipTransform.getPositionInWorld(), new Vector3d());
-        Vector3dc torque = trackRelPos.cross(tForce, new Vector3d());
-        return new ComputeResult(tForce, torque, clipResult);
+        // No shared net-clamp: apply this wheel's force immediately.
+        TrackPhysics.logCalibration("OleoWheel", sub, m, compression, tForce, dt, handle);
+        TrackPhysics.applyWorldForce(handle, pose, tForce, contactWorld, dt);
     }
 
     public double updateTrackBlock(BlockPos pos, OleoWheelData data) {
         this.wheelUpdateData.put(pos.asLong(), data);
-        return org.joml.Math.round(this.suspensionAdjust.y()*16) / 16. * ((9+1/(this.suspensionStiffness*2 - 1))/10);
+        return Math.round(this.suspensionAdjust.y() * 16) / 16. * ((9 + 1 / (this.suspensionStiffness * 2 - 1)) / 10);
     }
 
     public void removeTrackBlock(BlockPos pos) {
-        this.removedWheels.add(pos.asLong());
+        this.wheelUpdateData.remove(pos.asLong());
+        this.suspensionData.remove(pos.asLong());
     }
 
     public float setDamperCoefficient(float delta) {
-        this.suspensionStiffness = org.joml.Math.clamp(1.0f, 4.0f, this.suspensionStiffness + delta);
+        this.suspensionStiffness = Math.clamp(1.0f, 4.0f, this.suspensionStiffness + delta);
         return this.suspensionStiffness;
     }
 
     public void adjustSuspension(Vector3f delta) {
         Vector3dc old = this.suspensionAdjust;
         this.suspensionAdjust = new Vector3d(
-                org.joml.Math.clamp(-0.5, 0.5, old.x() + delta.x()*5),
-                org.joml.Math.clamp(0.1, 1, old.y() + delta.y()),
-                org.joml.Math.clamp(-0.5, 0.5, old.z() + delta.z()*5)
+                Math.clamp(-0.5, 0.5, old.x() + delta.x() * 5),
+                Math.clamp(0.1, 1, old.y() + delta.y()),
+                Math.clamp(-0.5, 0.5, old.z() + delta.z() * 5)
         );
     }
 
     public void resetSuspension() {
         double y = this.suspensionAdjust.y();
-        this.suspensionAdjust = new Vector3d(0, y,0);
-    }
-
-    private double tilt(Vector3dc relPos) {
-        return org.joml.Math.signum(relPos.x()) * this.suspensionAdjust.z() + org.joml.Math.signum(relPos.z()) * this.suspensionAdjust.x();
+        this.suspensionAdjust = new Vector3d(0, y, 0);
     }
 
     public @Nonnull TrackworkUtil.ClipResult getSuspensionData(BlockPos pos) {
         return suspensionData.getOrDefault(pos.asLong(), TrackworkUtil.ClipResult.MISS);
-    }
-
-    public static <T> boolean areQueuesEqual(Queue<T> left, Queue<T> right) {
-        return Arrays.equals(left.toArray(), right.toArray());
-    }
-
-    public boolean equals(Object other) {
-        if (this == other) {
-            return true;
-        } else if (!(other instanceof OleoWheelController otherController)) {
-            return false;
-        } else {
-            return Objects.equals(this.wheelData, otherController.wheelData) &&
-                    Objects.equals(this.wheelUpdateData, otherController.wheelUpdateData) &&
-                    areQueuesEqual(this.removedWheels, otherController.removedWheels);
-        }
     }
 }

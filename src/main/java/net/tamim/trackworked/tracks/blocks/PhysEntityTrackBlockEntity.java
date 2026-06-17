@@ -1,17 +1,21 @@
 package net.tamim.trackworked.tracks.blocks;
 
 import net.tamim.trackworked.*;
+import net.tamim.trackworked.physics.SableShips;
 import net.tamim.trackworked.sounds.TrackSoundScapes;
 import net.tamim.trackworked.tracks.ITrackPointProvider;
 import net.tamim.trackworked.tracks.data.PhysEntityTrackData;
 import net.tamim.trackworked.tracks.forces.PhysEntityTrackController;
-import net.tamim.trackworked.wheel.WheelEntity;
+import dev.ryanhcode.sable.api.block.BlockEntitySubLevelActor;
+import dev.ryanhcode.sable.api.physics.handle.RigidBodyHandle;
+import dev.ryanhcode.sable.api.physics.mass.MassData;
+import dev.ryanhcode.sable.companion.math.JOMLConversion;
+import dev.ryanhcode.sable.sublevel.ServerSubLevel;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Direction;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.ComponentContents;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket;
 import net.minecraft.server.level.ServerLevel;
@@ -22,25 +26,12 @@ import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Math;
-import org.joml.Quaterniond;
-import org.joml.Vector3d;
 import org.joml.Vector3dc;
-import org.valkyrienskies.core.api.ships.LoadedServerShip;
-import org.valkyrienskies.core.api.ships.ServerShip;
-import org.valkyrienskies.core.api.ships.Ship;
-import org.valkyrienskies.core.api.ships.properties.ShipTransform;
-import org.valkyrienskies.core.internal.joints.*;
-import org.valkyrienskies.core.internal.physics.PhysicsEntityData;
-import org.valkyrienskies.core.impl.game.ships.ShipTransformImpl;
-import org.valkyrienskies.core.internal.physics.PhysicsEntityServer;
-import org.valkyrienskies.mod.api.ValkyrienSkies;
-import org.valkyrienskies.mod.common.VSGameUtilsKt;
-import org.valkyrienskies.mod.common.ValkyrienSkiesMod;
 
 import java.util.List;
 import java.util.function.Supplier;
@@ -48,25 +39,25 @@ import java.util.function.Supplier;
 import static com.simibubi.create.content.kinetics.base.RotatedPillarKineticBlock.AXIS;
 import static net.tamim.trackworked.tracks.blocks.TrackBaseBlock.*;
 import static net.minecraft.ChatFormatting.GRAY;
-import static org.valkyrienskies.mod.common.util.VectorConversionsMCKt.toJOML;
-import static org.valkyrienskies.mod.common.util.VectorConversionsMCKt.toMinecraft;
 
-public class PhysEntityTrackBlockEntity extends TrackBaseBlockEntity implements ITrackPointProvider {
+public class PhysEntityTrackBlockEntity extends TrackBaseBlockEntity implements ITrackPointProvider, BlockEntitySubLevelActor {
     private float wheelRadius;
-    protected final Supplier<Ship> ship;
+    /** Server sub-level whose plot contains this block, or {@code null} when in the ordinary world. */
+    protected final Supplier<ServerSubLevel> subLevel;
     @Deprecated(forRemoval = true)
     private Integer trackID;
+    // TODO(Phase D): id of the free wheel body once Sable physics entities exist. Persisted for compat.
     @Nullable
     private Long wheelId;
     private boolean assembled;
     public boolean assembleNextTick = true;
-    MutableComponent chatMessage = MutableComponent.create(ComponentContents.EMPTY);
+    MutableComponent chatMessage = Component.empty();
 
     public PhysEntityTrackBlockEntity(BlockEntityType<?> type, BlockPos pos, BlockState state) {
         super(type, pos, state);
         this.assembled = false;
         this.wheelRadius = 0.5f;
-        this.ship = () -> VSGameUtilsKt.getShipObjectManagingPos(this.level, pos);
+        this.subLevel = () -> SableShips.getSubLevelManagingPos(this.level, pos);
         this.wheelId = null;
     }
 
@@ -87,11 +78,10 @@ public class PhysEntityTrackBlockEntity extends TrackBaseBlockEntity implements 
         super.destroy();
 
         if (this.level != null && !this.level.isClientSide && this.assembled) {
-            LoadedServerShip ship = (LoadedServerShip) this.ship.get();
-            if (ship != null) {
-                PhysEntityTrackController controller = PhysEntityTrackController.getOrCreate(ship);
+            ServerSubLevel sub = this.subLevel.get();
+            if (sub != null) {
+                PhysEntityTrackController controller = PhysEntityTrackController.getOrCreate(sub);
                 controller.removeTrackBlock((ServerLevel) this.level, this.getBlockPos());
-
                 this.cleanupWheel();
             }
         }
@@ -102,17 +92,9 @@ public class PhysEntityTrackBlockEntity extends TrackBaseBlockEntity implements 
         super.onLoad();
 
         if (!this.level.isClientSide && this.assembled) {
-            LoadedServerShip ship = (LoadedServerShip) this.ship.get();
-            if (ship != null) {
-                if (this.wheelId != null && WheelEntity.aliveInLevel((ServerLevel) this.level, this.wheelId)) {
-                    this.asyncConstrainWheel(ship, this.wheelId, toJOML(Vec3.atCenterOf(this.getBlockPos())));
-                } else {
-                    this.assemble();
-                }
-                return;
-            }
-
-            this.disassemble();
+            // TODO(Phase D): reattach the free wheel body + revolute joint. For now re-register the
+            // track point with a fresh controller on next tick.
+            this.assembled = false;
             this.assembleNextTick = true;
         }
     }
@@ -120,28 +102,35 @@ public class PhysEntityTrackBlockEntity extends TrackBaseBlockEntity implements 
     private void assemble() {
         if (this.level != null && !this.level.isClientSide) {
             if (!isValidAxis(this.getBlockState().getValue(AXIS))) return;
-            ServerLevel slevel = (ServerLevel) this.level;
-            LoadedServerShip ship = (LoadedServerShip) this.ship.get();
-            if (ship != null) {
-                PhysEntityTrackController controller = PhysEntityTrackController.getOrCreate(ship);
+            ServerSubLevel sub = this.subLevel.get();
+            if (sub != null) {
+                PhysEntityTrackController controller = PhysEntityTrackController.getOrCreate(sub);
                 if (this.getAssembled()) {
                     this.disassemble();
                     controller.removeTrackBlock((ServerLevel) this.level, this.getBlockPos());
                 }
                 this.assembled = true;
-                Vector3dc trackLocalPos = toJOML(Vec3.atCenterOf(this.getBlockPos()));
+                Vector3dc trackLocalPos = JOMLConversion.atCenterOf(this.getBlockPos());
+                Vector3dc axis = TrackworkUtil.getAxisAsVec(this.getBlockState().getValue(AXIS));
 
-                long wheelId = VSGameUtilsKt.getShipObjectWorld(slevel).allocateShipId(VSGameUtilsKt.getDimensionId(slevel));
-                double wheelRadius = this.wheelRadius;
-                Vector3dc wheelGlobalPos = ship.getTransform().getShipToWorld().transformPosition(trackLocalPos, new Vector3d());
-
-                ShipTransform transform = ShipTransformImpl.Companion.create(wheelGlobalPos, new Vector3d());
-                PhysicsEntityData wheelData = WheelEntity.DataBuilder.createBasicData(wheelId, transform, 0.5, 200);
-                WheelEntity.createInLevel(slevel, wheelData);
-                ValkyrienSkiesMod.getOrCreateGTPA(ValkyrienSkies.getDimensionId(level)).disableCollisionBetween(wheelId, ship.getId());
-
-                this.asyncConstrainWheel(ship, wheelId, trackLocalPos);
-                this.wheelId = wheelId;
+                // Design A (shipped): the sprocket is a powered drive point — PhysEntityTrackController
+                // applies its drive force to the vehicle body each physics substep (see sable$physicsTick).
+                // Design B (free wheel = own ServerSubLevel + revolute joint) is API-feasible on Sable
+                // (SubLevelContainer.allocateNewSubLevel + pipeline.addConstraint(vehicle, wheel,
+                // new RotaryConstraintConfiguration(hubVehicle, hubWheel, axis, axis)) + handle.setMotor(
+                // ConstraintJointAxis.ANGULAR_X, -rpm, 0, damping, true, maxTorque)). It is deferred only
+                // because the sub-level lifecycle (allocate, place the wheel block, remove, reattach) needs
+                // validation in a live client, not because the API is missing.
+                PhysEntityTrackData.CreateData trackData = new PhysEntityTrackData.CreateData(
+                        trackLocalPos,
+                        axis,
+                        0L,
+                        0,
+                        0,
+                        null,
+                        this.getSpeed()
+                );
+                controller.addTrackBlock(this.getBlockPos(), trackData, -1);
                 this.sendData();
             }
         }
@@ -150,57 +139,6 @@ public class PhysEntityTrackBlockEntity extends TrackBaseBlockEntity implements 
     public void disassemble() {
         this.assembled = false;
         cleanupWheel();
-    }
-
-    /***
-     * Constraint creation and Attachment is queued onto the physics backend, hence async
-     */
-    private void asyncConstrainWheel(LoadedServerShip ship, long wheelId, Vector3dc trackLocalPos) {
-        ServerLevel slevel = (ServerLevel) this.level;
-        double attachCompliance = 1e-8;
-        double attachMaxForce = 1e50;
-        double hingeMaxForce = 1e25;
-        Vector3dc axis = TrackworkUtil.getAxisAsVec(this.getBlockState().getValue(AXIS));
-
-        // According to Triode's comment in org.valkyrienskies.mod.common.block.TestHingeBlock
-        // Hinge constraints will attempt to align the X-axes of both bodies, so to align the Z axis we
-        // apply this rotation to the X-axis
-        Quaterniond hingeOrientation = new Quaterniond();
-        if (this.getBlockState().getValue(AXIS) == Direction.Axis.Z) {
-            hingeOrientation = hingeOrientation.rotateLocalY(Math.PI/2);
-        }
-
-        VSRevoluteJoint axle = new VSRevoluteJoint(
-                ship.getId(),
-                new VSJointPose(trackLocalPos, hingeOrientation),
-                wheelId,
-                new VSJointPose(
-                        new Vector3d(0.5, 0.5, 0.5),
-                        new Quaterniond()),
-                new VSJointMaxForceTorque((float) attachMaxForce, (float) hingeMaxForce),
-                attachCompliance,
-                null,
-                null,
-                null,
-                null,
-                true
-        );
-
-        PhysEntityTrackData.CreateData trackData = new PhysEntityTrackData.CreateData(
-                trackLocalPos,
-                axis,
-                wheelId,
-                0,
-                0,
-                axle,
-                this.getSpeed()
-        );
-
-        ValkyrienSkiesMod.getOrCreateGTPA(ValkyrienSkies.getDimensionId(slevel)).addJoint(
-                axle,
-                0,
-                (id) -> PhysEntityTrackController.getOrCreate(ship).addTrackBlock(this.getBlockPos(), trackData, id)
-        );
     }
 
     @Override
@@ -213,7 +151,7 @@ public class PhysEntityTrackBlockEntity extends TrackBaseBlockEntity implements 
             this.trackID = null;
         }
 
-        if (this.ship.get() != null && !this.assembled && this.level != null) {
+        if (this.subLevel.get() != null && !this.assembled && this.level != null) {
             if (this.assembleNextTick) {
                 this.assemble();
                 this.assembleNextTick = false;
@@ -227,39 +165,24 @@ public class PhysEntityTrackBlockEntity extends TrackBaseBlockEntity implements 
             return;
         }
         if (this.assembled && !this.level.isClientSide) {
-            LoadedServerShip ship = (LoadedServerShip) this.ship.get();
-            if (ship != null) {
-                boolean isWheelAlive = this.wheelId != null && WheelEntity.aliveInLevel((ServerLevel) this.level, this.wheelId);
-                if (!isWheelAlive) {
-                    this.assemble();
-                } else {
-                    PhysicsEntityServer wheel = WheelEntity.getInLevel((ServerLevel) this.level, this.wheelId);
-                    Vector3dc idealPos = ship.getShipToWorld().transformPosition(toJOML(Vec3.atCenterOf(this.getBlockPos())));
-
-                    double distance = idealPos.distance(wheel.getShipTransform().getPositionInWorld());
-                    if (distance > 2f) {
-                        WheelEntity.moveTo((ServerLevel) this.level, this.wheelId, idealPos);
-                    }
-                }
-                if (this.wheelId == null || !WheelEntity.aliveInLevel((ServerLevel) this.level, this.wheelId)) {
-                    TrackworkMod.warn("Wheel is NULL after assembly! At {}", this.getBlockPos().toString());
-                    return;
-                }
-
-                PhysEntityTrackController controller = PhysEntityTrackController.getOrCreate(ship);
+            ServerSubLevel sub = this.subLevel.get();
+            if (sub != null) {
+                PhysEntityTrackController controller = PhysEntityTrackController.getOrCreate(sub);
                 PhysEntityTrackData.UpdateData data = new PhysEntityTrackData.UpdateData(
                         0,
                         0,
                         this.getSpeed(),
-                        this.wheelId
+                        0L,
+                        this.wheelRadius
                 );
                 controller.updateTrackBlock(this.getBlockPos(), data);
 
                 // Entity pushing, no damage here
+                // TODO(Phase D): push relative to the sub-level pose. Stubbed in world space.
                 List<LivingEntity> hits = this.level.getEntitiesOfClass(LivingEntity.class, new AABB(this.getBlockPos())
                         .deflate(0.25)
                 );
-                Vec3 worldPos = toMinecraft(ship.getShipToWorld().transformPosition(toJOML(Vec3.atCenterOf(this.getBlockPos()))));
+                Vec3 worldPos = Vec3.atCenterOf(this.getBlockPos());
                 for (LivingEntity e : hits) {
                     SuspensionTrackBlockEntity.push(e, worldPos);
                     if (e instanceof ServerPlayer p) p.connection.send(new ClientboundSetEntityMotionPacket(p));
@@ -283,33 +206,8 @@ public class PhysEntityTrackBlockEntity extends TrackBaseBlockEntity implements 
     }
 
     public void cleanupWheel() {
-        if (this.wheelId != null) {
-            WheelEntity.removeInLevel((ServerLevel) this.level, this.wheelId);
-        }
-    }
-
-//    @Override
-//    public boolean addToGoggleTooltip(List<Component> tooltip, boolean isPlayerSneaking) {
-//        if (!TrackworkConfigs.server().enableStress.get()) return false;
-//        Ship ship = this.ship.get();
-//        if (!this.assembled || ship == null) return false;
-//
-//        addStressImpactStats(tooltip, calculateStressApplied(this.shipMass));
-////        addMassStats(tooltip, this.shipMass);
-//
-//        return true;
-//    }
-
-    public void addMassStats(List<Component> tooltip, float mass) {
-        Component.literal("Total Mass")
-                .withStyle(GRAY);
-
-        Component.literal(String.valueOf(mass))
-                .append(" kg")
-                .withStyle(ChatFormatting.WHITE);
-//                .space()
-//                .add(Lang.translate("gui.goggles.at_current_speed")
-//                        .style(ChatFormatting.DARK_GRAY))
+        // TODO(Phase D): despawn the associated free wheel body when Sable physics entities exist.
+        this.wheelId = null;
     }
 
     @Override
@@ -351,20 +249,29 @@ public class PhysEntityTrackBlockEntity extends TrackBaseBlockEntity implements 
         return Math.clamp(-maxRpm, maxRpm, super.getSpeed());
     }
 
-    @Override
-    public void write(CompoundTag compound, boolean clientPacket) {
-        compound.putBoolean("Assembled", this.assembled);
-        if (this.trackID != null) compound.putInt("trackBlockID", this.trackID);
-        if (this.wheelId != null) compound.putLong("wheelId", this.wheelId);
-        super.write(compound, clientPacket);
+    public void addMassStats(List<Component> tooltip, float mass) {
+        Component.literal("Total Mass")
+                .withStyle(GRAY);
+
+        Component.literal(String.valueOf(mass))
+                .append(" kg")
+                .withStyle(ChatFormatting.WHITE);
     }
 
     @Override
-    protected void read(CompoundTag compound, boolean clientPacket) {
+    public void write(CompoundTag compound, HolderLookup.Provider registries, boolean clientPacket) {
+        compound.putBoolean("Assembled", this.assembled);
+        if (this.trackID != null) compound.putInt("trackBlockID", this.trackID);
+        if (this.wheelId != null) compound.putLong("wheelId", this.wheelId);
+        super.write(compound, registries, clientPacket);
+    }
+
+    @Override
+    protected void read(CompoundTag compound, HolderLookup.Provider registries, boolean clientPacket) {
         this.assembled = compound.getBoolean("Assembled");
         if (this.trackID == null && compound.contains("trackBlockID")) this.trackID = compound.getInt("trackBlockID");
         if (this.wheelId == null && compound.contains("wheelId")) this.wheelId = compound.getLong("wheelId");
-        super.read(compound, clientPacket);
+        super.read(compound, registries, clientPacket);
     }
 
     @Override
@@ -372,10 +279,12 @@ public class PhysEntityTrackBlockEntity extends TrackBaseBlockEntity implements 
         if (this.level.isClientSide || !TrackworkConfigs.server().enableStress.get() ||
                 !this.assembled || this.getBlockState().getValue(PART) != TrackPart.start) return super.calculateStressApplied();
 
-        Ship ship = this.ship.get();
-        if (ship == null) return super.calculateStressApplied();
-        double mass = ((ServerShip) ship).getInertiaData().getMass();
-        float impact = this.calculateStressApplied((float) mass);
+        // Scale stress by the sub-level mass (VS2 read ServerShip inertia; Sable exposes it via MassData).
+        ServerSubLevel sub = this.subLevel.get();
+        MassData mass = sub == null ? null : sub.getMassTracker();
+        if (mass == null || mass.isInvalid())
+            return super.calculateStressApplied();
+        float impact = calculateStressApplied((float) mass.getMass());
         this.lastStressApplied = impact;
         return impact;
     }
@@ -386,5 +295,12 @@ public class PhysEntityTrackBlockEntity extends TrackBaseBlockEntity implements 
             impact = 0;
         }
         return (float) impact;
+    }
+
+    /** Sable physics hook: applies the sprocket's drive force (Design A force-only) each physics substep. */
+    @Override
+    public void sable$physicsTick(ServerSubLevel subLevel, RigidBodyHandle handle, double timeStep) {
+        if (!this.assembled || !handle.isValid()) return;
+        PhysEntityTrackController.getOrCreate(subLevel).physicsTick(subLevel, handle, this.getBlockPos(), timeStep);
     }
 }

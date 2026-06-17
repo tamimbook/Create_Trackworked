@@ -1,42 +1,23 @@
 package net.tamim.trackworked.tracks.data;
 
-import com.fasterxml.jackson.annotation.JsonAutoDetect;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import org.joml.Vector3dc;
-import org.valkyrienskies.core.internal.joints.VSRevoluteJoint;
 
 import javax.annotation.Nonnull;
 
-@JsonAutoDetect(
-        fieldVisibility = JsonAutoDetect.Visibility.ANY
-)
 public class PhysEntityTrackData {
     public final Vector3dc trackPos;
     public final Vector3dc wheelAxis;
     public final long shiptraptionID;
     public final double springConstant;
     public final double damperConstant;
-    @JsonIgnore
-    public final VSRevoluteJoint constraint;
+    // TODO(Phase D): was a VS2 VSRevoluteJoint; replace with the Sable joint/constraint handle.
+    public final Object constraint;
     public volatile Integer axleId;
     public final double trackRPM;
     public float trackSU;
     public double previousSpringDist;
 
-    // For Jackson
-    private PhysEntityTrackData() {
-        this.trackPos = null;
-        this.wheelAxis = null;
-        this.springConstant = 0;
-        this.damperConstant = 0;
-        this.constraint = null;
-        this.shiptraptionID = -1L;
-        this.axleId = null;
-        this.trackRPM = 0;
-        this.previousSpringDist = 0;
-    }
-
-    private PhysEntityTrackData(Vector3dc trackPos, Vector3dc wheelAxis, long shiptraptionID, double springConstant, double damperConstant, VSRevoluteJoint constraint, int axleId, double trackRPM, double springDist) {
+    private PhysEntityTrackData(Vector3dc trackPos, Vector3dc wheelAxis, long shiptraptionID, double springConstant, double damperConstant, Object constraint, int axleId, double trackRPM, double springDist) {
         this.trackPos = trackPos;
         this.wheelAxis = wheelAxis;
         this.springConstant = springConstant;
@@ -56,9 +37,9 @@ public class PhysEntityTrackData {
         return new PhysEntityTrackData(data.trackPos, data.wheelAxis, data.shiptraptionID, data.springConstant, data.damperConstant, data.constraint, -1, data.trackRPM, 0);
     }
 
-    public record UpdateData(double springConstant, double damperConstant, double trackRPM, long shiptraptionID) {
+    public record UpdateData(double springConstant, double damperConstant, double trackRPM, long shiptraptionID, double wheelRadius) {
     }
 
-    public record CreateData(Vector3dc trackPos, Vector3dc wheelAxis, long shiptraptionID, double springConstant, double damperConstant, VSRevoluteJoint constraint, double trackRPM) {
+    public record CreateData(Vector3dc trackPos, Vector3dc wheelAxis, long shiptraptionID, double springConstant, double damperConstant, Object constraint, double trackRPM) {
     }
 }

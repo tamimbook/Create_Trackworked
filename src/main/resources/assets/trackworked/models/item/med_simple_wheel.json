@@ -5,10 +5,10 @@
 	"render_type": "minecraft:cutout",
 	"texture_size": [128, 128],
 	"textures": {
-		"1": "trackwork:block/rib",
-		"2": "trackwork:block/girder",
-		"6": "trackwork:block/med_tyre",
-		"particle": "trackwork:block/rib"
+		"1": "trackworked:block/rib",
+		"2": "trackworked:block/girder",
+		"6": "trackworked:block/med_tyre",
+		"particle": "trackworked:block/rib"
 	},
 	"elements": [
 		{

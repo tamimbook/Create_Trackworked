@@ -1,7 +1,7 @@
 package net.tamim.trackworked.client;
 
 import dev.engine_room.flywheel.lib.model.baked.PartialModel;
-import net.tamim.trackworked.TrackworkMod;
+import net.tamim.trackworked.TrackworkedMod;
 
 public class TrackworkPartialModels {
     public static final PartialModel
@@ -28,7 +28,7 @@ public class TrackworkPartialModels {
             HORN_PIPE = block("partial/horn_pipe");
 
     private static PartialModel block(String path) {
-        return PartialModel.of(TrackworkMod.getResource("block/" + path));
+        return PartialModel.of(TrackworkedMod.getResource("block/" + path));
     }
 
     public static void init() {}

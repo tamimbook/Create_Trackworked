@@ -10,7 +10,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.util.StringRepresentable;
 import net.minecraft.world.InteractionHand;
-import net.minecraft.world.InteractionResult;
+import net.minecraft.world.ItemInteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.BlockPlaceContext;
@@ -62,9 +62,8 @@ public class WheelBlock extends HorizontalKineticBlock implements IBE<WheelBlock
     }
 
     @Override
-    public @NotNull InteractionResult use(BlockState state, Level world, BlockPos pos, Player player, InteractionHand handIn,
-                                          BlockHitResult hit) {
-        ItemStack heldItem = player.getItemInHand(handIn);
+    protected @NotNull ItemInteractionResult useItemOn(ItemStack heldItem, BlockState state, Level world, BlockPos pos, Player player,
+                                                       InteractionHand handIn, BlockHitResult hit) {
         if (AllItems.WRENCH.isIn(heldItem)) {
             if (state.hasProperty(VISUAL_VARIANT)) {
                 VisualVariant old = state.getValue(VISUAL_VARIANT);
@@ -74,11 +73,11 @@ public class WheelBlock extends HorizontalKineticBlock implements IBE<WheelBlock
                     default -> VisualVariant.vdefault;
                 };
                 world.setBlockAndUpdate(pos, state.setValue(VISUAL_VARIANT, newVariant));
-                return InteractionResult.SUCCESS;
+                return ItemInteractionResult.SUCCESS;
             }
         }
 
-        return super.use(state, world, pos, player, handIn, hit);
+        return super.useItemOn(heldItem, state, world, pos, player, handIn, hit);
     }
     
     @Override

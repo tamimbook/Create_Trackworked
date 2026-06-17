@@ -1,6 +1,7 @@
 package net.tamim.trackworked.sounds;
 
 import com.simibubi.create.infrastructure.config.AllConfigs;
+import net.tamim.trackworked.physics.SableShips;
 import net.createmod.catnip.animation.AnimationTickHolder;
 import net.createmod.catnip.math.VecHelper;
 import net.minecraft.client.Minecraft;
@@ -9,7 +10,6 @@ import net.minecraft.sounds.SoundEvent;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.Vec3;
-import org.valkyrienskies.mod.common.VSGameUtilsKt;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -79,7 +79,7 @@ public class TrackSoundScape {
 		Minecraft mc = Minecraft.getInstance();
 		for (BlockPos blockPos : TrackSoundScapes.getAllLocations(group, pitchGroup)) {
 			if (mc.level != null) {
-				blockPos = BlockPos.containing(VSGameUtilsKt.toWorldCoordinates(mc.level, Vec3.atCenterOf(blockPos)));
+				blockPos = BlockPos.containing(SableShips.toWorldCoordinates(mc.level, Vec3.atCenterOf(blockPos)));
 			}
 			meanPos = meanPos.add(VecHelper.getCenterOf(blockPos));
 			amount++;

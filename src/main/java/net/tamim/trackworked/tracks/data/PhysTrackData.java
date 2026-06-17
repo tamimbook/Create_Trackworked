@@ -1,22 +1,12 @@
 package net.tamim.trackworked.tracks.data;
 
-import com.fasterxml.jackson.annotation.JsonAutoDetect;
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import net.tamim.trackworked.TrackworkUtil;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import org.joml.Vector3d;
 import org.joml.Vector3dc;
-import org.valkyrienskies.core.api.util.PhysTickOnly;
 
 import javax.annotation.Nullable;
 
-import static org.valkyrienskies.mod.common.util.VectorConversionsMCKt.toMinecraft;
-
-@JsonAutoDetect(
-        fieldVisibility = JsonAutoDetect.Visibility.ANY
-)
-@JsonIgnoreProperties(ignoreUnknown = true)
 public class PhysTrackData {
     public final Long blockPos;
 
@@ -26,7 +16,6 @@ public class PhysTrackData {
     public final double wheelRadius;
     public final boolean inWater;
 
-    @PhysTickOnly
     @Nullable
     public Vector3dc lastSuspensionForce;
     public final double effectiveSuspensionTravel;
@@ -38,14 +27,9 @@ public class PhysTrackData {
 
     public float trackSU;
 
-    // For Jackson serialisation
-    private PhysTrackData() {
-        this(BlockPos.ZERO);
-    }
-
     private PhysTrackData(BlockPos trackPos) {
         this.trackOriginPosition = new Vector3d();
-        this.lastSuspensionForce = new Vector3d();;
+        this.lastSuspensionForce = new Vector3d();
         this.blockPos = trackPos.asLong();
         this.wheelAxis = Direction.Axis.X;
         this.horizontalOffset = 0;
@@ -69,20 +53,6 @@ public class PhysTrackData {
     }
 
     public final PhysTrackData updateWith(PhysTrackUpdateData update) {
-        // Backwards compat
-        if (!trackOriginPosition.equals(TrackworkUtil.ZERO)) {
-            return new PhysTrackData(
-                    this.lastSuspensionForce,
-                    BlockPos.containing(toMinecraft(trackOriginPosition)),
-                    update.wheelAxis,
-                    update.horizontalOffset,
-                    update.effectiveSuspensionTravel,
-                    update.wheelRadius,
-                    update.inWater,
-                    update.trackRPM
-            );
-        }
-
         return new PhysTrackData(
                 this.lastSuspensionForce,
                 BlockPos.of(this.blockPos),

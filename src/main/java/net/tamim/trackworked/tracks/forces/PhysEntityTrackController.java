@@ -1,118 +1,126 @@
 package net.tamim.trackworked.tracks.forces;
 
-import com.fasterxml.jackson.annotation.JsonAutoDetect;
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.mojang.datafixers.util.Pair;
-import net.tamim.trackworked.TrackworkMod;
+import dev.ryanhcode.sable.api.physics.handle.RigidBodyHandle;
+import dev.ryanhcode.sable.api.physics.mass.MassData;
+import dev.ryanhcode.sable.companion.math.Pose3dc;
+import dev.ryanhcode.sable.sublevel.ServerSubLevel;
+import net.tamim.trackworked.TrackworkUtil;
 import net.tamim.trackworked.tracks.data.PhysEntityTrackData;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
-import org.jetbrains.annotations.NotNull;
 import org.joml.Math;
 import org.joml.Vector3d;
 import org.joml.Vector3dc;
-import org.valkyrienskies.core.api.ships.*;
-import org.valkyrienskies.core.api.ships.properties.ShipTransform;
-import org.valkyrienskies.core.api.world.PhysLevel;
-import org.valkyrienskies.core.impl.game.ships.PhysShipImpl;
-import org.valkyrienskies.mod.api.ValkyrienSkies;
-import org.valkyrienskies.mod.common.ValkyrienSkiesMod;
 
 import javax.annotation.Nonnull;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedQueue;
 
-@JsonAutoDetect(
-        fieldVisibility = JsonAutoDetect.Visibility.ANY
-)
-public final class PhysEntityTrackController implements ShipPhysicsListener {
-    @JsonIgnore
+/**
+ * Per-sub-level controller for the {@code phys_track} sprocket variant.
+ *
+ * <p>Phase D ships <b>Design A (force-only)</b>: the VS2 build drove free wheel rigid bodies through
+ * revolute joints, but creating a runtime free-body anchored sub-level is not reachable through
+ * Sable's public API (see {@code sable-physics-api} notes). So the sprocket instead applies its drive
+ * force directly to the vehicle body at the ground contact below it — RPM in, traction out — and the
+ * wheel model spins cosmetically client-side. Design B (real revolute joints) remains gated on a
+ * public runtime sub-level-creation path.</p>
+ */
+public final class PhysEntityTrackController {
     public static final double RPM_TO_RADS = 0.10471975512;
-    @JsonIgnore
-    public static final Vector3dc UP = new Vector3d(0, 1, 0);
+    public static final double MAXIMUM_G = 98.1 * 5;
 
-    @Deprecated
-    // For Backwards compatibility
-    public final HashMap<Integer, PhysEntityTrackData> trackData = new HashMap<>();
-    public final HashMap<Long, PhysEntityTrackData> trackData2 = new HashMap<>();
+    /** Drive force gain (matches the VS2 {@code -slip * m * 0.4 * coP} torque model). */
+    private static final double DRIVE_GAIN = 0.4;
+    /** Max drive slip (rad/s-equivalent), clamped both directions. */
+    private static final double MAX_DRIVE_SLIP = 3.0;
+    /** Light support spring so the sprocket holds the vehicle up without a full suspension. */
+    private static final double SUPPORT_SPRING = 2.0;
+    private static final double SUPPORT_DAMPER = 0.8;
 
-    @JsonIgnore
-    private final ConcurrentLinkedQueue<Pair<Long, PhysEntityTrackData.CreateData>> createdTrackData = new ConcurrentLinkedQueue<>();
-    @JsonIgnore
-    private final ConcurrentHashMap<Long, PhysEntityTrackData.UpdateData> trackUpdateData = new ConcurrentHashMap<>();
-    private final ConcurrentLinkedQueue<Long> removedTracks = new ConcurrentLinkedQueue<>();
-    private final HashMap<Long, Integer> posToJointId = new HashMap<>();
-
-    @JsonIgnore
+    private static final Map<UUID, PhysEntityTrackController> INSTANCES = new ConcurrentHashMap<>();
     private static final ConcurrentHashMap<Long, List<Long>> ignoreIdsPerVehicle = new ConcurrentHashMap<>();
 
-    @JsonIgnore
-    @Deprecated(forRemoval = true)
-    private int nextBearingID = 0;
+    public final ConcurrentHashMap<Long, PhysEntityTrackData> trackData2 = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<Long, PhysEntityTrackData.UpdateData> trackUpdateData = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<Long, Integer> posToJointId = new ConcurrentHashMap<>();
 
-    public PhysEntityTrackController() {
+    public PhysEntityTrackController() {}
+
+    public static PhysEntityTrackController getOrCreate(ServerSubLevel subLevel) {
+        return INSTANCES.computeIfAbsent(subLevel.getUniqueId(), $ -> new PhysEntityTrackController());
     }
 
-    public static PhysEntityTrackController getOrCreate(LoadedServerShip ship) {
-        return ship.getOrPutAttachment(PhysEntityTrackController.class, PhysEntityTrackController::new);
-    }
+    /** Per-substep drive force for a single sprocket (Design A force-only). */
+    public void physicsTick(ServerSubLevel sub, RigidBodyHandle handle, BlockPos pos, double dt) {
+        PhysEntityTrackData.UpdateData u = trackUpdateData.get(pos.asLong());
+        PhysEntityTrackData cd = trackData2.get(pos.asLong());
+        if (u == null || cd == null || !handle.isValid()) return;
 
+        MassData massData = sub.getMassTracker();
+        if (massData == null || massData.isInvalid()) return;
+        double m = massData.getMass();
+        if (m <= 0) return;
+        Vector3dc comLocal = massData.getCenterOfMass();
+        Pose3dc pose = sub.logicalPose();
 
-    @Override
-    public void physTick(@NotNull PhysShip physShip, @NotNull PhysLevel physLevel) {
-        while (!removedTracks.isEmpty()) {
-            Long removeId = this.removedTracks.remove();
-            this.trackData2.remove(removeId);
+        double R = u.wheelRadius() > 0 ? u.wheelRadius() : 0.5;
+        double count = Math.max(1.0, trackUpdateData.size());
+        double coP = Math.min(1.0, 4.0 / count);
+
+        Vector3d centerLocal = new Vector3d(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5);
+        Vector3d worldStart = pose.transformPosition(centerLocal, new Vector3d());
+        Vector3d worldDown = pose.transformNormal(new Vector3d(0, -1, 0), new Vector3d());
+        if (worldDown.lengthSquared() < 1.0e-9) return;
+        worldDown.normalize();
+        Vector3d worldUp = new Vector3d(worldDown).negate();
+
+        // Drive-forward is perpendicular to the axle axis, horizontal.
+        Vector3dc axis = cd.wheelAxis;
+        Vector3d forwardLocal = (Math.abs(axis.x()) > 0.5) ? new Vector3d(0, 0, 1) : new Vector3d(1, 0, 0);
+        Vector3d driveForwardWorld = pose.transformNormal(forwardLocal, new Vector3d());
+
+        double maxLen = R + 1.0;
+        TrackworkUtil.ClipResult clip = TrackPhysics.clipGround(sub, worldStart, worldDown, maxLen, driveForwardWorld);
+        if (clip == TrackworkUtil.ClipResult.MISS || clip.suspensionLength() == null) return;
+
+        double hitDist = clip.suspensionLength().length();
+        Vector3d contactWorld = new Vector3d(worldStart).add(clip.suspensionLength());
+        Vector3d comWorld = TrackPhysics.centerOfMassWorld(pose, comLocal, new Vector3d());
+        Vector3d vAtP = TrackPhysics.velocityAtPoint(handle, comWorld, contactWorld, new Vector3d());
+
+        Vector3d tForce = new Vector3d();
+
+        // Light support so the sprocket can hold the contraption up (no full suspension model here).
+        double support = (R + 0.1) - hitDist;
+        if (support > 0) {
+            tForce.fma(m * SUPPORT_SPRING * coP * support, worldUp);
+            double compressionRate = -vAtP.dot(worldUp);
+            tForce.fma(m * SUPPORT_DAMPER * coP * compressionRate, worldUp);
         }
 
-        while (!this.createdTrackData.isEmpty()) {
-            Pair<Long, PhysEntityTrackData.CreateData> createData = this.createdTrackData.remove();
-            if (createData.getFirst() != null && createData.getSecond() != null) this.trackData2.put(createData.getFirst(), PhysEntityTrackData.from(createData.getSecond()));
-            else TrackworkMod.warn("Tried to create a PE track of ID {} with no data!", createData.getFirst());
+        // Drive force from RPM slip, applied along the track tangent.
+        double rpm = u.trackRPM();
+        if (rpm != 0) {
+            double trackSurface = rpm * RPM_TO_RADS * R;
+            Vector3dc tangent = clip.trackTangent();
+            Vector3d surfaceVel = new Vector3d(vAtP);
+            surfaceVel.fma(-surfaceVel.dot(worldUp), worldUp);
+            double slip = Math.clamp(-MAX_DRIVE_SLIP, MAX_DRIVE_SLIP, trackSurface - surfaceVel.dot(tangent));
+            tForce.fma(slip * m * DRIVE_GAIN * coP, tangent);
         }
 
-        this.trackUpdateData.forEach((id, data) -> {
-            PhysEntityTrackData old = this.trackData2.get(id);
-            if (old != null) {
-                this.trackData2.put(id, old.updateWith(data));
-            }
-        });
-        this.trackUpdateData.clear();
-
-//         Idk why, but sometimes removing a block can send an update in the same tick(?), so this is last.
-        if (this.trackData2.isEmpty()) return;
-
-        double coefficientOfPower = Math.min(1.0d, 4d / this.trackData2.size());
-        List<Long> ignoreIds = new ArrayList<>();
-        this.trackData2.forEach((id, data) -> {
-            ignoreIds.add(data.shiptraptionID);
-            PhysShip wheel = physLevel.getShipById(data.shiptraptionID);
-            Pair<Vector3dc, Vector3dc> forces = this.computeForce(data, ((PhysShipImpl) physShip), (PhysShipImpl)wheel, coefficientOfPower);
-            if (forces != null) {
-//                if (forces.getSecond().isFinite()) wheel.applyWorldTorque(forces.getSecond());
-            }
-        });
-        ignoreIds.add(physShip.getId());
-        ignoreIdsPerVehicle.put(physShip.getId(), ignoreIds);
-    }
-
-    private Pair<@NotNull Vector3dc, @NotNull Vector3dc> computeForce(PhysEntityTrackData data, PhysShip ship, PhysShip wheel, double coefficientOfPower) {
-        if (wheel != null) {
-            double m = ship.getMass();
-            ShipTransform shipTransform = ship.getTransform();
-            Vector3dc wheelAxis = shipTransform.getShipToWorldRotation().transform(data.wheelAxis, new Vector3d());
-            double wheelSpeed = wheel.getKinematics().getAngularVelocity().dot(wheelAxis);
-            double slip = Math.clamp(-3, 3, -data.trackRPM - wheelSpeed);
-            Vector3dc driveTorque = wheelAxis.mul(-slip * m * 0.4 * coefficientOfPower, new Vector3d());
-            return new Pair<>(new Vector3d(0), driveTorque);
-        }
-        return null;
+        TrackPhysics.clampLength(tForce, MAXIMUM_G * m);
+        TrackPhysics.logCalibration("PhysEntityTrack", sub, m, 0.0, tForce, dt, handle);
+        TrackPhysics.applyWorldForce(handle, pose, tForce, contactWorld, dt);
     }
 
     public void addTrackBlock(BlockPos pos, PhysEntityTrackData.CreateData data, int axleId) {
-        this.createdTrackData.add(new Pair<>(pos.asLong(), data));
-        posToJointId.put(pos.asLong(), axleId);
+        this.trackData2.put(pos.asLong(), PhysEntityTrackData.from(data));
+        this.posToJointId.put(pos.asLong(), axleId);
     }
 
     public void updateTrackBlock(BlockPos pos, PhysEntityTrackData.UpdateData data) {
@@ -120,39 +128,21 @@ public final class PhysEntityTrackController implements ShipPhysicsListener {
     }
 
     public void removeTrackBlock(ServerLevel level, BlockPos pos) {
-        this.removedTracks.add(pos.asLong());
-        posToJointId.computeIfPresent(
-                pos.asLong(),
-                (k, id) -> {
-                    ValkyrienSkiesMod.getOrCreateGTPA(ValkyrienSkies.getDimensionId(level)).removeJoint(id);
-                    return null;
-                }
-        );
+        long key = pos.asLong();
+        this.trackData2.remove(key);
+        this.trackUpdateData.remove(key);
+        this.posToJointId.remove(key);
     }
 
     public static @Nonnull List<Long> getWheelIds(long vehicleId) {
         return ignoreIdsPerVehicle.getOrDefault(vehicleId, new ArrayList<>());
     }
 
-    @Deprecated
+    /**
+     * Clears any stale per-vehicle joint bookkeeping. A no-op for drive forces (Design A); kept so the
+     * reset stick has a stable hook once free wheel bodies + joints exist (Design B).
+     */
     public void resetController() {
-        // Do nothing
-    }
-
-    public static <T> boolean areQueuesEqual(Queue<T> left, Queue<T> right) {
-        return Arrays.equals(left.toArray(), right.toArray());
-    }
-
-    public boolean equals(Object other) {
-        if (this == other) {
-            return true;
-        } else if (!(other instanceof PhysEntityTrackController otherController)) {
-            return false;
-        } else {
-            return Objects.equals(this.trackData2, otherController.trackData2) &&
-                    Objects.equals(this.trackUpdateData, otherController.trackUpdateData) &&
-                    areQueuesEqual(this.createdTrackData, otherController.createdTrackData) &&
-                    areQueuesEqual(this.removedTracks, otherController.removedTracks);
-        }
+        this.posToJointId.clear();
     }
 }

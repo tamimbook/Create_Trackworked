@@ -1,32 +1,32 @@
 {
   "suspension_creak": {
-    "subtitle": "subtitle.trackwork.suspension_creak",
+    "subtitle": "subtitle.trackworked.suspension_creak",
     "sounds" : [
       {
-        "name": "trackwork:suspension_creak",
+        "name": "trackworked:suspension_creak",
         "type": "file"
       }
     ]
   },
   "power_wrench": {
-    "subtitle": "subtitle.trackwork.power_wrench",
+    "subtitle": "subtitle.trackworked.power_wrench",
     "sounds" : [
       {
-        "name": "trackwork:power_wrench_1",
+        "name": "trackworked:power_wrench_1",
         "type": "file"
       },
       {
-        "name": "trackwork:power_wrench_2",
+        "name": "trackworked:power_wrench_2",
         "type": "file"
       },
       {
-        "name": "trackwork:power_wrench_3",
+        "name": "trackworked:power_wrench_3",
         "type": "file"
       }
     ]
   },
   "spring_tool": {
-    "subtitle": "subtitle.trackwork.spring_tool",
+    "subtitle": "subtitle.trackworked.spring_tool",
     "sounds" : [
       {
         "name": "minecraft:block.wooden_trapdoor.open",
@@ -35,7 +35,7 @@
     ]
   },
   "track_ambient_sprocket": {
-    "subtitle": "subtitle.trackwork.ambient.track.sprocket",
+    "subtitle": "subtitle.trackworked.ambient.track.sprocket",
     "sounds": [
       {
         "name": "entity.minecart.riding",
@@ -44,7 +44,7 @@
     ]
   },
   "track_ambient_ground_1": {
-    "subtitle": "subtitle.trackwork.ambient.track.ground",
+    "subtitle": "subtitle.trackworked.ambient.track.ground",
     "sounds" : [
       {
         "name": "minecraft:block.netherrack.hit",
@@ -63,7 +63,7 @@
   "track_ground_slip": {
     "sounds" : [
       {
-        "name": "trackwork:track_ground_slip",
+        "name": "trackworked:track_ground_slip",
         "type": "file"
       }
     ]
@@ -72,13 +72,13 @@
   "wheel_rocktoss": {
     "sounds": [
       {
-        "name": "trackwork:wheel_rocktoss",
+        "name": "trackworked:wheel_rocktoss",
         "type": "file"
       }
     ]
   },
   "wheel_ambient_ground_1": {
-    "subtitle": "subtitle.trackwork.ambient.wheel.ground",
+    "subtitle": "subtitle.trackworked.ambient.wheel.ground",
     "sounds" : [
       {
         "name": "minecraft:block.netherrack.hit",
@@ -97,16 +97,16 @@
   "wheel_ground_slip": {
     "sounds" : [
       {
-        "name": "trackwork:wheel_ground_slip",
+        "name": "trackworked:wheel_ground_slip",
         "type": "file"
       }
     ]
   },
   "honk": {
-    "subtitle": "subtitle.trackwork.honk",
+    "subtitle": "subtitle.trackworked.honk",
     "sounds" : [
       {
-        "name": "trackwork:honk",
+        "name": "trackworked:honk",
         "type": "file",
         "attenuation_distance": 64
       }

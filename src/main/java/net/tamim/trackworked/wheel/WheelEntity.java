@@ -1,94 +1,43 @@
 package net.tamim.trackworked.wheel;
 
 import net.minecraft.server.level.ServerLevel;
-import org.jetbrains.annotations.NotNull;
-import org.joml.Matrix3d;
-import org.joml.Quaterniond;
-import org.joml.Vector3d;
 import org.joml.Vector3dc;
-import org.valkyrienskies.core.api.ships.properties.ShipInertiaData;
-import org.valkyrienskies.core.api.ships.properties.ShipTransform;
-import org.valkyrienskies.core.internal.ShipTeleportData;
-import org.valkyrienskies.core.internal.physics.PhysicsEntityData;
-import org.valkyrienskies.core.internal.physics.PhysicsEntityServer;
-import org.valkyrienskies.core.internal.physics.VSSphereCollisionShapeData;
-import org.valkyrienskies.core.internal.world.VsiServerShipWorld;
-import org.valkyrienskies.mod.common.VSGameUtilsKt;
-import org.valkyrienskies.mod.common.util.DimensionIdProvider;
 
-import javax.annotation.Nullable;
+/**
+ * Free physics-body "wheel" wrapper — the optional <b>Design B</b> upgrade for {@code phys_track}.
+ *
+ * <p>In the Valkyrien Skies build this wrapped a standalone {@code PhysicsEntity} — a rigid sphere
+ * joined to the host ship by a revolute joint and spun by the {@code phys_track} sprocket. The
+ * shipped Phase D build uses <b>Design A</b> instead: the sprocket applies its drive force to the
+ * vehicle body directly (see {@code PhysEntityTrackController}), so these methods stay inert.</p>
+ *
+ * <p>Design B <em>is</em> reachable on Sable (the recon's "no joint API" note was wrong): a wheel can
+ * be its own {@code ServerSubLevel} via {@code SubLevelContainer.allocateNewSubLevel(Pose3d)}, joined
+ * with {@code pipeline.addConstraint(vehicle, wheel, new RotaryConstraintConfiguration(...))} and
+ * driven by {@code PhysicsConstraintHandle.setMotor(ConstraintJointAxis.ANGULAR_X, ...)}. It is left
+ * unimplemented only because the sub-level lifecycle (allocate, place the wheel block, register with
+ * physics, remove, reattach on reload) must be validated in a live client. See {@code [[sable-physics-api]]}.</p>
+ */
+public final class WheelEntity {
+    private WheelEntity() {}
 
-import static org.valkyrienskies.mod.common.ValkyrienSkiesMod.getVsCore;
-
-public class WheelEntity {
-    public static @Nullable PhysicsEntityServer getInLevel(ServerLevel level, long id) {
-        if (!aliveInLevel(level, id)) {
-            return null;
-        }
-        return VSGameUtilsKt.getShipObjectWorld(level)
-                .retrieveLoadedPhysicsEntities().get(id);
-    }
-
+    /** @return whether a wheel body with this id currently exists. Always {@code false} under Design A. */
     public static boolean aliveInLevel(ServerLevel level, long id) {
-        return VSGameUtilsKt.getShipObjectWorld(level)
-                .retrieveLoadedPhysicsEntities().containsKey(id);
+        return false;
     }
 
-    public static void createInLevel(ServerLevel level, PhysicsEntityData data) {
-        VSGameUtilsKt.getShipObjectWorld(level).createPhysicsEntity(data, ((DimensionIdProvider) level).getDimensionId());
+    /** Design B: allocate the wheel sub-level + revolute joint. No-op under the shipped Design A. */
+    public static void createInLevel(ServerLevel level, long id, Vector3dc pos, double radius, double mass) {
+        // no-op under Design A (force-only drive)
     }
 
+    /** Design B: despawn the wheel sub-level + remove its joint. No-op under Design A. */
     public static void removeInLevel(ServerLevel level, long id) {
-        if (aliveInLevel(level, id)) {
-            VSGameUtilsKt.getShipObjectWorld(level).deletePhysicsEntity(id);
-        }
+        // no-op under Design A
     }
 
+    /** Design B: teleport the wheel body to {@code pos}. @return {@code false} under Design A. */
     public static boolean moveTo(ServerLevel level, long id, Vector3dc pos) {
-        if (!aliveInLevel(level, id)) {
-            return false;
-        }
-        PhysicsEntityServer serverData = VSGameUtilsKt.getShipObjectWorld(level)
-                .retrieveLoadedPhysicsEntities().get(id);
-
-        ShipTeleportData teleportData = getVsCore().newShipTeleportData(
-                pos,
-                new Quaterniond(),
-                new Vector3d(),
-                new Vector3d(),
-                null,
-                null,
-                null
-        );
-        VSGameUtilsKt.getShipObjectWorld(level).teleportPhysicsEntity(serverData, teleportData);
-        return true;
-    }
-
-    public static final class DataBuilder {
-        private DataBuilder() {
-        }
-
-        @NotNull
-        public static PhysicsEntityData createBasicData(long shipId, @NotNull ShipTransform transform, double radius, double mass) {
-            double inertia = 0.4 * mass * radius * radius;
-            ShipInertiaData inertiaData = getVsCore().newShipInertiaData(new Vector3d(), mass * radius, new Matrix3d().scale(inertia));
-            VSSphereCollisionShapeData collisionShapeData = new VSSphereCollisionShapeData(radius);
-            // TODO: Current crashes physics, reimplement when safe
-//            VSWheelCollisionShapeData collisionShapeData = new VSWheelCollisionShapeData(radius, 0.45, (int)(11 * radius));
-            return new PhysicsEntityData(
-                    shipId,
-                    transform,
-                    inertiaData,
-                    new Vector3d(),
-                    new Vector3d(),
-                    collisionShapeData,
-                    -1,
-                    0.8,
-                    0.6,
-                    0.6,
-                    false
-
-            );
-        }
+        return false;
     }
 }

@@ -1,0 +1,14 @@
+{
+  "required": true,
+  "minVersion": "0.8.5",
+  "package": "net.tamim.trackworked.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "refmap": "trackworked.refmap.json",
+  "mixins": [
+    "MixinRotationPropagator"
+  ],
+  "client": [],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

@@ -1,238 +1,155 @@
 package net.tamim.trackworked.tracks.forces;
 
-import com.fasterxml.jackson.annotation.JsonAutoDetect;
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.mojang.datafixers.util.Pair;
+import dev.ryanhcode.sable.api.physics.handle.RigidBodyHandle;
+import dev.ryanhcode.sable.api.physics.mass.MassData;
+import dev.ryanhcode.sable.companion.math.Pose3dc;
+import dev.ryanhcode.sable.sublevel.ServerSubLevel;
 import net.tamim.trackworked.TrackworkUtil;
-import net.tamim.trackworked.tracks.blocks.SuspensionTrackBlockEntity;
 import net.tamim.trackworked.tracks.data.PhysTrackData;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Direction;
-import net.minecraft.world.phys.Vec3;
-import org.jetbrains.annotations.NotNull;
 import org.joml.Math;
 import org.joml.Vector3d;
 import org.joml.Vector3dc;
 import org.joml.Vector3f;
-import org.valkyrienskies.core.api.bodies.properties.BodyKinematics;
-import org.valkyrienskies.core.api.physics.RayCastResult;
-import org.valkyrienskies.core.api.ships.*;
-import org.valkyrienskies.core.api.ships.properties.ShipTransform;
-import org.valkyrienskies.core.api.world.PhysLevel;
-import org.valkyrienskies.core.impl.game.ships.PhysShipImpl;
 
 import javax.annotation.Nonnull;
-import java.util.*;
+import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedQueue;
 
-import static net.tamim.trackworked.TrackworkUtil.accumulatedVelocity;
-import static org.valkyrienskies.mod.common.util.VectorConversionsMCKt.toJOML;
-import static org.valkyrienskies.mod.common.util.VectorConversionsMCKt.toMinecraft;
-
-@JsonAutoDetect(
-        fieldVisibility = JsonAutoDetect.Visibility.ANY
-)
-public final class PhysicsTrackController implements ShipPhysicsListener {
-    @JsonIgnore
+/**
+ * Per-sub-level controller for suspension {@code phys_track} (continuous track) blocks.
+ *
+ * <p>Phase D: softer suspension than a road wheel, a single combined slip force (no lateral split),
+ * and a low-thrust in-water paddle. Force is applied at the block centre to keep per-block pitch
+ * moments small along a long track. The owning {@code SuspensionTrackBlockEntity} implements
+ * {@code BlockEntitySubLevelActor} and forwards {@code sable$physicsTick} here.</p>
+ */
+public final class PhysicsTrackController {
     public static final double RPM_TO_RADS = 0.10471975512;
-
-    @JsonIgnore
     public static final double MAXIMUM_SLIP = 10;
-    @JsonIgnore
     public static final double MAXIMUM_G = 98.1 * 5;
-
     public static final Vector3dc UP = new Vector3d(0, 1, 0);
 
-    @Deprecated
-    // For Backwards compatibility
-    private final HashMap<Integer, PhysTrackData> trackData = new HashMap<>();
-    private final HashMap<Long, PhysTrackData> trackData2 = new HashMap<>();
-    @JsonIgnore
-    private final HashMap<Long, TrackworkUtil.ClipResult> suspensionData = new HashMap<>();
+    /** Soft track suspension spring gain. */
+    private static final double SPRING_GAIN = 1.0;
+    /** Track suspension damper gain (basis = stiffness). */
+    private static final double DAMPER_GAIN = 0.6;
+    /** Track grip gain. */
+    private static final double GRIP_GAIN = 1.0;
+    /** Fraction of drive thrust delivered while paddling in water. */
+    private static final double WATER_THRUST = 0.2;
 
-    @JsonIgnore
-    private final ConcurrentLinkedQueue<Pair<Long, PhysTrackData.PhysTrackCreateData>> createdTrackData = new ConcurrentLinkedQueue<>();
-    @JsonIgnore
+    private static final Map<UUID, PhysicsTrackController> INSTANCES = new ConcurrentHashMap<>();
+
+    private final ConcurrentHashMap<Long, PhysTrackData> trackData2 = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<Long, PhysTrackData.PhysTrackUpdateData> trackUpdateData = new ConcurrentHashMap<>();
-    private final ConcurrentLinkedQueue<Long> removedTracks = new ConcurrentLinkedQueue<>();
-    private int nextBearingID = 0;
+    private final ConcurrentHashMap<Long, TrackworkUtil.ClipResult> suspensionData = new ConcurrentHashMap<>();
 
     private volatile Vector3dc suspensionAdjust = new Vector3d(0, 1, 0);
     private volatile float suspensionStiffness = 1.0f;
-    @JsonIgnore
-    @Deprecated(forRemoval = true)
-    private volatile float suspensionDampening = 1.2f;
 
-    public PhysicsTrackController () {}
+    public PhysicsTrackController() {}
 
-    public static PhysicsTrackController getOrCreate(LoadedServerShip ship) {
-        if (ship.getAttachment(PhysicsTrackController.class) == null) {
-            ship.setAttachment(PhysicsTrackController.class, new PhysicsTrackController());
-        }
-        return ship.getAttachment(PhysicsTrackController.class);
+    public static PhysicsTrackController getOrCreate(ServerSubLevel subLevel) {
+        return INSTANCES.computeIfAbsent(subLevel.getUniqueId(), $ -> new PhysicsTrackController());
     }
 
-    @JsonIgnore
-    @Deprecated(forRemoval = true)
-    private float debugTick = 0;
+    /** Per-substep force application for a single track block. */
+    public void physicsTick(ServerSubLevel sub, RigidBodyHandle handle, BlockPos pos, double dt) {
+        PhysTrackData.PhysTrackUpdateData u = trackUpdateData.get(pos.asLong());
+        if (u == null || !handle.isValid()) return;
 
-    @Override
-    public void physTick(@NotNull PhysShip physShip, @NotNull PhysLevel physLevel) {
-        if (!this.trackData.isEmpty()) {
-            this.trackData.forEach((id, data) ->
-                    this.trackData2.put(data.blockPos, data)
-            );
-            this.trackData.clear();
+        MassData massData = sub.getMassTracker();
+        if (massData == null || massData.isInvalid()) {
+            suspensionData.put(pos.asLong(), TrackworkUtil.ClipResult.MISS);
+            return;
+        }
+        double m = massData.getMass();
+        if (m <= 0) return;
+        Vector3dc comLocal = massData.getCenterOfMass();
+        Pose3dc pose = sub.logicalPose();
+
+        double R = u.wheelRadius();
+        double restOffset = R - 0.5;
+        double susScaled = u.effectiveSuspensionTravel();
+        double count = Math.max(1.0, trackUpdateData.size());
+        double coP = Math.min(2.0, 14.0 / count);
+
+        Vector3d mountLocal = new Vector3d(pos.getX() + 0.5, pos.getY() + 0.5 - restOffset, pos.getZ() + 0.5);
+        Vector3d worldStart = pose.transformPosition(mountLocal, new Vector3d());
+        Vector3d worldDown = pose.transformNormal(new Vector3d(0, -1, 0), new Vector3d());
+        if (worldDown.lengthSquared() < 1.0e-9) return;
+        worldDown.normalize();
+        Vector3d worldUp = new Vector3d(worldDown).negate();
+
+        Vector3d forwardLocal = TrackworkUtil.getForwardVec3d(u.wheelAxis(), 1f);
+        Vector3d driveForwardWorld = pose.transformNormal(forwardLocal, new Vector3d());
+        Vector3d applyAt = pose.transformPosition(new Vector3d(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5), new Vector3d());
+
+        // Low-thrust water paddle, applied whether or not the track is grounded.
+        if (u.inWater() && u.trackRPM() != 0f) {
+            double surf = u.trackRPM() * RPM_TO_RADS * R * WATER_THRUST;
+            Vector3d thrust = new Vector3d(driveForwardWorld).mul(m * coP * surf);
+            TrackPhysics.applyWorldForce(handle, pose, thrust, applyAt, dt);
         }
 
-        while(!this.createdTrackData.isEmpty()) {
-            Pair<Long, PhysTrackData.PhysTrackCreateData> createData = this.createdTrackData.remove();
-            this.trackData2.put(createData.getFirst(), PhysTrackData.from(createData.getSecond()));
-        }
+        double maxLen = susScaled + 0.5 + R;
+        TrackworkUtil.ClipResult clip = TrackPhysics.clipGround(sub, worldStart, worldDown, maxLen, driveForwardWorld);
+        suspensionData.put(pos.asLong(), clip);
+        if (clip == TrackworkUtil.ClipResult.MISS || clip.suspensionLength() == null) return;
 
-        this.trackUpdateData.forEach((id, data) -> {
-            PhysTrackData old = this.trackData2.get(id);
-            if (old != null) {
-                this.trackData2.put(id, old.updateWith(data));
-            }
-        });
-        this.trackUpdateData.clear();
+        double hitDist = clip.suspensionLength().length();
+        double compression = susScaled - (hitDist - R);
+        if (compression <= 0) return;
+        compression = Math.min(compression, susScaled);
 
-        // Sometimes removing a block sends an update in the same tick
-        while(!removedTracks.isEmpty()) {
-            Long removeId = this.removedTracks.remove();
-            if (removeId != null) this.trackData2.remove(removeId);
-        }
-
-        if (this.trackData2.isEmpty()) return;
-
-        Vector3d netLinearForce = new Vector3d(0);
-        Vector3d netTorque = new Vector3d(0);
-
-        // Thanks java
-        long[] ignoreIds = PhysEntityTrackController.getWheelIds(physShip.getId())
-                .stream().mapToLong(l -> l).toArray();
-
-        double coefficientOfPower = Math.min(2.0d, 14d / this.trackData2.size());
-        this.trackData2.forEach((id, data) -> {
-            ComputeResult computeResult = this.computeForce(data, (PhysShipImpl) physShip, physLevel,
-                    coefficientOfPower, ignoreIds);
-            suspensionData.put(id, computeResult.clipResult);
-            if (computeResult.linearForce.isFinite()) {
-                netLinearForce.add(computeResult.linearForce);
-                netTorque.add(computeResult.torque);
-            }
-        });
-
-        // Clamp total acceleration to avoid physics explosions
-        if (netLinearForce.isFinite() && netLinearForce.length()/ physShip.getMass() < MAXIMUM_G) {
-            physShip.applyWorldForce(netLinearForce, physShip.getKinematics().getPosition());
-            if (netTorque.isFinite()) physShip.applyWorldTorque(netTorque);
-        }
-    }
-
-    private record ComputeResult(Vector3dc linearForce, Vector3dc torque, TrackworkUtil.ClipResult clipResult) {}
-
-    private ComputeResult computeForce(PhysTrackData data, PhysShipImpl ship, @NotNull PhysLevel physLevel,
-                                                    double coefficientOfPower, long[] ignoreIds) {
-        Vec3 start = Vec3.atCenterOf(BlockPos.of(data.blockPos));
-        Direction.Axis axis = data.wheelAxis;
-        double restOffset = data.wheelRadius - 0.5f;
-        double suspensionRestPosition = data.effectiveSuspensionTravel;
-
-        Vec3 worldSpaceNormal = toMinecraft(ship.getTransform().getShipToWorldRotation().transform(
-                toJOML(TrackworkUtil.getActionNormal(data.wheelAxis)), new Vector3d()).mul(data.effectiveSuspensionTravel + 0.5));
-        Vec3 worldSpaceStart = toMinecraft(ship.getShipToWorld().transformPosition(toJOML(start.add(0, -restOffset, 0))));
-        Vector3dc worldSpaceForward = ship.getTransform().getShipToWorldRotation().transform(TrackworkUtil.getForwardVec3d(axis, 1), new Vector3d());
-        Vec3 worldSpaceHorizontalOffset = toMinecraft(
-                worldSpaceForward.mul(data.horizontalOffset, new Vector3d())
-        );
-
-        Vector3dc trackTangentForce;
-        TrackworkUtil.ClipResult clipResult = TrackworkUtil.clipAndResolvePhys(
-                physLevel, ship, TrackworkUtil.getAxisAsVec(axis),
-                toJOML(worldSpaceStart.add(worldSpaceHorizontalOffset)), toJOML(worldSpaceNormal),
-                data.wheelRadius, 1, ignoreIds);
-                // Apply forces at the center of the block to reduce pitching moment from acceleration
-        Vector3dc trackContactPosition = toJOML(worldSpaceStart);
-        trackTangentForce = clipResult.trackTangent().mul(data.wheelRadius / 0.5, new Vector3d());
-        if (data.inWater) {
-            trackTangentForce = ship.getTransform().getShipToWorldRotation().transform(
-                    TrackworkUtil.getForwardVec3d(axis, 1)).mul(data.wheelRadius / 0.5).mul(0.2);
-        }
-
-        double suspensionTravel = clipResult.equals(TrackworkUtil.ClipResult.MISS) ? suspensionRestPosition : clipResult.suspensionLength().length() - 0.5;
-        Vector3dc suspensionForce = toJOML(worldSpaceNormal.scale( (suspensionRestPosition - suspensionTravel))).negate();
-
-        BodyKinematics pose = ship.getKinematics();
-        ShipTransform shipTransform = ship.getTransform();
-        double m =  ship.getMass();
-        Vector3dc trackRelPosShip = toJOML(start).sub(shipTransform.getPositionInShip(), new Vector3d());
+        Vector3d contactWorld = new Vector3d(worldStart).add(clip.suspensionLength());
+        Vector3d comWorld = TrackPhysics.centerOfMassWorld(pose, comLocal, new Vector3d());
+        Vector3d vAtP = TrackPhysics.velocityAtPoint(handle, comWorld, contactWorld, new Vector3d());
+        if (clip.groundVelocity() != null) vAtP.sub(clip.groundVelocity());
 
         Vector3d tForce = new Vector3d();
-        Vector3dc trackNormal = toJOML(worldSpaceNormal).normalize(new Vector3d());
 
-        double suspensionCompressionDelta = 0;
-        if (data.lastSuspensionForce != null) {
-            suspensionCompressionDelta = suspensionForce.sub(data.lastSuspensionForce, new Vector3d()).length();
-        }
-        data.lastSuspensionForce = suspensionForce;
-        Vector3dc trackSurface = trackTangentForce.mul(data.trackRPM * RPM_TO_RADS * 0.5, new Vector3d());
-        Vector3dc velocityAtPosition = accumulatedVelocity(shipTransform, pose, trackContactPosition);
+        // Spring (soft).
+        double springMag = m * SPRING_GAIN * coP * suspensionStiffness * compression;
+        tForce.fma(springMag, worldUp);
 
-        boolean istrackGrounded = !clipResult.equals(TrackworkUtil.ClipResult.MISS);
+        // Damper (basis = stiffness).
+        double compressionRate = -vAtP.dot(worldUp);
+        double damperMag = m * DAMPER_GAIN * coP * suspensionStiffness * compressionRate;
+        tForce.fma(damperMag, worldUp);
 
-        if (istrackGrounded) {
-            velocityAtPosition = velocityAtPosition.sub(clipResult.groundVelocity(), new Vector3d());
-        }
-
-        // Suspension
-        if (istrackGrounded) {
-            double suspensionDelta = velocityAtPosition.dot(trackNormal) + suspensionCompressionDelta;
-            double tilt = 1 + this.tilt(trackRelPosShip);
-
-            // Spring force
-            tForce.add(suspensionForce.mul(m * 1.0 * coefficientOfPower * this.suspensionStiffness * tilt, new Vector3d()));
-
-            // Damper force
-            tForce.add(trackNormal.mul(m * 0.6 * -suspensionDelta * coefficientOfPower * this.suspensionStiffness, new Vector3d()));
-
-            // Really half-assed antislip when the spring is stronger than friction (what?)
-            if (data.trackRPM == 0) {
-                tForce = new Vector3d(0, tForce.y(), 0);
-            }
+        // Drive: combined slip, no lateral split, no gravity factor. Zero horizontal when unpowered
+        // (a stopped track is free to slide sideways, matching the VS2 model).
+        if (u.trackRPM() != 0f && !u.inWater()) {
+            double trackSurface = u.trackRPM() * RPM_TO_RADS * R;
+            Vector3dc tangent = clip.trackTangent();
+            Vector3d surfaceVel = new Vector3d(vAtP);
+            surfaceVel.fma(-surfaceVel.dot(worldUp), worldUp);
+            Vector3d slip = new Vector3d(tangent).mul(trackSurface).sub(surfaceVel);
+            TrackPhysics.clampLength(slip, MAXIMUM_SLIP);
+            tForce.fma(m * GRIP_GAIN * coP, slip);
         }
 
-        // Slip/friction
-        if (istrackGrounded || trackSurface.lengthSquared() > 0) {
-            Vector3dc surfaceVelocity = velocityAtPosition.sub(trackNormal.mul(velocityAtPosition.dot(trackNormal), new Vector3d()), new Vector3d());
-            Vector3dc slipVelocity = trackSurface.sub(surfaceVelocity, new Vector3d());
-            // TODO: Do I want to use real friction here?
-            if (!istrackGrounded) {
-                slipVelocity = surfaceVelocity.normalize(new Vector3d())
-                        .mul(slipVelocity.dot(surfaceVelocity.normalize(new Vector3d())), new Vector3d());
-            }
-            tForce = tForce.add(slipVelocity.normalize(Math.min(slipVelocity.length(), MAXIMUM_SLIP), new Vector3d())
-                    .mul(1.0 * m * coefficientOfPower), new Vector3d());
-        }
-
-        Vector3dc trackRelPos = shipTransform.getShipToWorldRotation().transform(trackRelPosShip, new Vector3d());
-        Vector3dc torque = trackRelPos.cross(tForce, new Vector3d());
-        return new ComputeResult(tForce, torque, clipResult);
+        TrackPhysics.clampLength(tForce, MAXIMUM_G * m);
+        TrackPhysics.logCalibration("PhysTrack", sub, m, compression, tForce, dt, handle);
+        TrackPhysics.applyWorldForce(handle, pose, tForce, applyAt, dt);
     }
 
     public void addTrackBlock(PhysTrackData.PhysTrackCreateData data) {
-        this.createdTrackData.add(new Pair<>(data.blockPos().asLong(), data));
+        this.trackData2.put(data.blockPos().asLong(), PhysTrackData.from(data));
     }
 
     public double updateTrackBlock(BlockPos pos, PhysTrackData.PhysTrackUpdateData data) {
         this.trackUpdateData.put(pos.asLong(), data);
-        return Math.round(this.suspensionAdjust.y()*16) / 16. * ((9+1/(this.suspensionStiffness*2 - 1))/10);
+        return Math.round(this.suspensionAdjust.y() * 16) / 16. * ((9 + 1 / (this.suspensionStiffness * 2 - 1)) / 10);
     }
 
     public void removeTrackBlock(long id) {
-        this.removedTracks.add(id);
+        this.trackData2.remove(id);
+        this.trackUpdateData.remove(id);
+        this.suspensionData.remove(id);
     }
 
     public float setSuspensionDampening(float delta) {
@@ -240,49 +157,21 @@ public final class PhysicsTrackController implements ShipPhysicsListener {
         return this.suspensionStiffness;
     }
 
-    @Deprecated
-    public float setDamperCoefficient(float delta) {
-        return setSuspensionDampening(delta);
-    }
-
     public void adjustSuspension(Vector3f delta) {
         Vector3dc old = this.suspensionAdjust;
         this.suspensionAdjust = new Vector3d(
-                Math.clamp(-0.5, 0.5, old.x() + delta.x()*5),
+                Math.clamp(-0.5, 0.5, old.x() + delta.x() * 5),
                 Math.clamp(0.1, 1, old.y() + delta.y()),
-                Math.clamp(-0.5, 0.5, old.z() + delta.z()*5)
+                Math.clamp(-0.5, 0.5, old.z() + delta.z() * 5)
         );
     }
 
     public void resetSuspension() {
         double y = this.suspensionAdjust.y();
-        this.suspensionAdjust = new Vector3d(0, y,0);
-    }
-
-    private double tilt(Vector3dc relPos) {
-        return Math.signum(relPos.x()) * this.suspensionAdjust.z() + Math.signum(relPos.z()) * this.suspensionAdjust.x();
+        this.suspensionAdjust = new Vector3d(0, y, 0);
     }
 
     public @Nonnull TrackworkUtil.ClipResult getSuspensionData(BlockPos pos) {
         return suspensionData.getOrDefault(pos.asLong(), TrackworkUtil.ClipResult.MISS);
-    }
-
-    public static <T> boolean areQueuesEqual(Queue<T> left, Queue<T> right) {
-        return Arrays.equals(left.toArray(), right.toArray());
-    }
-
-    public boolean equals(Object other) {
-        if (this == other) {
-            return true;
-        } else if (!(other instanceof PhysicsTrackController otherController)) {
-            return false;
-        } else {
-            return Objects.equals(this.trackData2, otherController.trackData2) &&
-                    Objects.equals(this.trackUpdateData, otherController.trackUpdateData) &&
-                    areQueuesEqual(this.createdTrackData, otherController.createdTrackData) &&
-                    areQueuesEqual(this.removedTracks, otherController.removedTracks) &&
-                    this.nextBearingID == otherController.nextBearingID &&
-                    Float.compare(this.suspensionStiffness, otherController.suspensionStiffness) == 0;
-        }
     }
 }

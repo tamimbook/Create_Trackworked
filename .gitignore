@@ -13,7 +13,7 @@ out/
 !**/src/**/out/
 
 .run/
-
+*.log
 ### Eclipse ###
 .apt_generated
 .classpath

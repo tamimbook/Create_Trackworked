@@ -2,18 +2,16 @@ package net.tamim.trackworked.blocks;
 
 import com.simibubi.create.content.kinetics.base.KineticBlockEntity;
 import com.simibubi.create.content.kinetics.base.RotatedPillarKineticBlock;
+import dev.ryanhcode.sable.sublevel.ServerSubLevel;
+import net.tamim.trackworked.physics.SableShips;
 import net.tamim.trackworked.tracks.forces.OleoWheelController;
 import net.tamim.trackworked.tracks.forces.PhysicsTrackController;
 import net.tamim.trackworked.tracks.forces.SimpleWheelController;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import org.joml.Vector3f;
-import org.valkyrienskies.core.api.ships.LoadedServerShip;
-import org.valkyrienskies.core.api.ships.ServerShip;
-import org.valkyrienskies.mod.common.VSGameUtilsKt;
 
 public class TrackAdjusterBlockEntity extends KineticBlockEntity {
     public TrackAdjusterBlockEntity(BlockEntityType<?> typeIn, BlockPos pos, BlockState state) {
@@ -25,7 +23,7 @@ public class TrackAdjusterBlockEntity extends KineticBlockEntity {
         super.destroy();
 
         if (this.level.isClientSide) return;
-        LoadedServerShip ship = VSGameUtilsKt.getShipObjectManagingPos((ServerLevel)this.level, this.getBlockPos());
+        ServerSubLevel ship = SableShips.getSubLevelManagingPos(this.level, this.getBlockPos());
         if (ship != null) {
             PhysicsTrackController controller = PhysicsTrackController.getOrCreate(ship);
             controller.resetSuspension();
@@ -37,7 +35,7 @@ public class TrackAdjusterBlockEntity extends KineticBlockEntity {
         super.tick();
 
         if (this.level.isClientSide) return;
-        LoadedServerShip ship = VSGameUtilsKt.getShipObjectManagingPos((ServerLevel)this.level, this.getBlockPos());
+        ServerSubLevel ship = SableShips.getSubLevelManagingPos(this.level, this.getBlockPos());
         if (ship != null) {
             Direction.Axis axis = this.getBlockState().getValue(RotatedPillarKineticBlock.AXIS);
             Vector3f vec = Direction.get(Direction.AxisDirection.POSITIVE, axis).step();

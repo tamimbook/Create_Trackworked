@@ -3,7 +3,7 @@
 	"parent": "create:block/belt",
 	"texture_size": [32, 32],
 	"textures": {
-		"2": "trackwork:block/belt"
+		"2": "trackworked:block/belt"
 	},
 	"elements": [
 		{

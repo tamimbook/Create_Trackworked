@@ -2,13 +2,13 @@ package net.tamim.trackworked.sounds;
 
 import com.simibubi.create.infrastructure.config.AllConfigs;
 import net.tamim.trackworked.TrackworkConfigs;
+import net.tamim.trackworked.physics.SableShips;
 import net.createmod.catnip.animation.AnimationTickHolder;
 import net.createmod.catnip.data.Pair;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.Vec3;
-import org.valkyrienskies.mod.common.VSGameUtilsKt;
 
 import java.util.*;
 
@@ -73,7 +73,7 @@ public class TrackSoundScapes {
     protected static boolean outOfRange(BlockPos pos) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.level != null) {
-            pos = BlockPos.containing(VSGameUtilsKt.toWorldCoordinates(mc.level, Vec3.atCenterOf(pos)));
+            pos = BlockPos.containing(SableShips.toWorldCoordinates(mc.level, Vec3.atCenterOf(pos)));
         }
         return !getCameraPos().closerThan(pos, getMaxAmbientSourceDistance());
     }

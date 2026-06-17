@@ -2,8 +2,8 @@
 	"credit": "Made with Blockbench",
 	"parent": "block/block",
 	"textures": {
-		"2": "trackwork:item/kit/stiff_tool",
-		"particle": "trackwork:item/kit/stiff_tool"
+		"2": "trackworked:item/kit/stiff_tool",
+		"particle": "trackworked:item/kit/stiff_tool"
 	},
 	"elements": [
 		{

@@ -1,11 +1,11 @@
 {
 	"credit": "Made with Blockbench",
-	"parent": "trackwork:block/med_wheels",
+	"parent": "trackworked:block/med_wheels",
 	"texture_size": [32, 32],
 	"textures": {
 		"0": "create:block/axis",
 		"1": "create:block/axis_top",
-		"3": "trackwork:block/cogwheel",
+		"3": "trackworked:block/cogwheel",
 		"particle": "create:block/axis"
 	},
 	"elements": [

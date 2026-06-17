@@ -1,21 +1,24 @@
 package net.tamim.trackworked;
 
 import net.createmod.catnip.config.ConfigBase;
-import net.minecraftforge.common.ForgeConfigSpec;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.ModLoadingContext;
-import net.minecraftforge.fml.config.ModConfig;
-import net.minecraftforge.fml.event.config.ModConfigEvent;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.ModContainer;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.fml.config.ModConfig;
+import net.neoforged.fml.event.config.ModConfigEvent;
+import net.neoforged.neoforge.common.ModConfigSpec;
 import org.apache.commons.lang3.tuple.Pair;
 
 import java.util.EnumMap;
 import java.util.Map;
 import java.util.function.Supplier;
 
+@EventBusSubscriber(modid = TrackworkedMod.MODID)
 public class TrackworkConfigs {
     private static final Map<ModConfig.Type, ConfigBase> CONFIGS = new EnumMap<>(ModConfig.Type.class);
     private static TServer server;
     private static TClient client;
+
     public static class TServer extends ConfigBase {
         public final ConfigBase.ConfigBool enableStress = this.b(false, "enableTrackStress", "Enable track Kinetic Stress");
         public final ConfigBase.ConfigFloat stressMult = this.f(1/50f, 0.0f, "stressMultiplier", "Stress multiplier, units SU/(ton x RPM)");
@@ -32,7 +35,6 @@ public class TrackworkConfigs {
 
     public static class TClient extends ConfigBase {
         public final ConfigBase.ConfigInt trackRenderDist = this.i(256, "trackRenderDist", "Track render distance");
-
         public final ConfigBase.ConfigInt trackSoundDist = this.i(16, 1, 64, "trackSoundDist", "Track sound distance");
 
         @Override
@@ -42,12 +44,10 @@ public class TrackworkConfigs {
     }
 
     public static TClient client() { return TrackworkConfigs.client; }
-    public static TServer server() {
-        return TrackworkConfigs.server;
-    }
+    public static TServer server() { return TrackworkConfigs.server; }
 
     private static <T extends ConfigBase> T register(Supplier<T> factory, ModConfig.Type side) {
-        Pair<T, ForgeConfigSpec> specPair = new ForgeConfigSpec.Builder().configure(builder -> {
+        Pair<T, ModConfigSpec> specPair = new ModConfigSpec.Builder().configure(builder -> {
             T config = factory.get();
             config.registerAll(builder);
             return config;
@@ -59,27 +59,25 @@ public class TrackworkConfigs {
         return config;
     }
 
-    public static void register(ModLoadingContext context) {
+    public static void register(ModContainer container) {
         server = register(TServer::new, ModConfig.Type.SERVER);
         client = register(TClient::new, ModConfig.Type.CLIENT);
 
         for (Map.Entry<ModConfig.Type, ConfigBase> pair : CONFIGS.entrySet())
-            context.registerConfig(pair.getKey(), pair.getValue().specification);
+            container.registerConfig(pair.getKey(), pair.getValue().specification);
     }
 
     @SubscribeEvent
     public static void onLoad(ModConfigEvent.Loading event) {
         for (ConfigBase config : CONFIGS.values())
-            if (config.specification == event.getConfig()
-                    .getSpec())
+            if (config.specification == event.getConfig().getSpec())
                 config.onLoad();
     }
 
     @SubscribeEvent
     public static void onReload(ModConfigEvent.Reloading event) {
         for (ConfigBase config : CONFIGS.values())
-            if (config.specification == event.getConfig()
-                    .getSpec())
+            if (config.specification == event.getConfig().getSpec())
                 config.onReload();
     }
 }

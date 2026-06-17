@@ -1,0 +1,20 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "PPP",
+    "PTP",
+    "PPP"
+  ],
+  "key": {
+    "P": {
+      "tag": "minecraft:planks"
+    },
+    "T": {
+      "item": "trackworked:suspension_track"
+    }
+  },
+  "result": {
+    "id": "trackworked:med_suspension_track",
+    "count": 1
+  }
+}

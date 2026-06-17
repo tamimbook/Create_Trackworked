@@ -6,7 +6,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.util.StringRepresentable;
 import net.minecraft.world.InteractionHand;
-import net.minecraft.world.InteractionResult;
+import net.minecraft.world.ItemInteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
@@ -45,10 +45,8 @@ public class SuspensionTrackBlock extends TrackBaseBlock<SuspensionTrackBlockEnt
     }
 
     @Override
-    public @NotNull InteractionResult use(BlockState state, Level world, BlockPos pos, Player player, InteractionHand handIn,
-                                          BlockHitResult hit) {
-        ItemStack heldItem = player.getItemInHand(handIn);
-
+    protected @NotNull ItemInteractionResult useItemOn(ItemStack heldItem, BlockState state, Level world, BlockPos pos, Player player,
+                                                       InteractionHand handIn, BlockHitResult hit) {
         if (AllItems.WRENCH.isIn(heldItem)) {
             if (state.hasProperty(WHEEL_VARIANT)) {
                 TrackVariant old = state.getValue(WHEEL_VARIANT);
@@ -56,10 +54,10 @@ public class SuspensionTrackBlock extends TrackBaseBlock<SuspensionTrackBlockEnt
                     case wheel -> world.setBlockAndUpdate(pos, state.setValue(WHEEL_VARIANT, TrackVariant.blank));
                     default -> world.setBlockAndUpdate(pos, state.setValue(WHEEL_VARIANT, TrackVariant.wheel));
                 }
-                return InteractionResult.SUCCESS;
+                return ItemInteractionResult.SUCCESS;
             }
         }
-        return super.use(state, world, pos, player, handIn, hit);
+        return super.useItemOn(heldItem, state, world, pos, player, handIn, hit);
     }
 
     @Override

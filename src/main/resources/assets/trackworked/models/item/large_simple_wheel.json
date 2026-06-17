@@ -5,9 +5,9 @@
 	"render_type": "minecraft:cutout",
 	"texture_size": [128, 128],
 	"textures": {
-		"1": "trackwork:block/large_tyre",
-		"2": "trackwork:block/girder",
-		"particle": "trackwork:block/large_tyre"
+		"1": "trackworked:block/large_tyre",
+		"2": "trackworked:block/girder",
+		"particle": "trackworked:block/large_tyre"
 	},
 	"elements": [
 		{

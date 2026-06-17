@@ -5,8 +5,8 @@ import net.minecraft.core.RegistrySetBuilder;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.data.DataGenerator;
 import net.minecraft.data.PackOutput;
-import net.minecraftforge.common.data.DatapackBuiltinEntriesProvider;
-import net.minecraftforge.data.event.GatherDataEvent;
+import net.neoforged.neoforge.common.data.DatapackBuiltinEntriesProvider;
+import net.neoforged.neoforge.data.event.GatherDataEvent;
 
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -30,7 +30,7 @@ public class TrackDatagen {
                 .add(Registries.DAMAGE_TYPE, TrackDamageTypes::bootstrap);
 
         public GeneratedEntriesProvider(PackOutput output, CompletableFuture<HolderLookup.Provider> registries) {
-            super(output, registries, BUILDER, Set.of(TrackworkMod.MOD_ID));
+            super(output, registries, BUILDER, Set.of(TrackworkedMod.MOD_ID));
         }
 
         @Override

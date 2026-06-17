@@ -5,14 +5,11 @@ import com.simibubi.create.foundation.blockEntity.behaviour.BlockEntityBehaviour
 import net.tamim.trackworked.client.HornSoundInstance;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.util.Mth;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
-import net.minecraftforge.fml.DistExecutor;
-import org.valkyrienskies.mod.common.VSGameUtilsKt;
 
 import java.util.List;
 
@@ -38,12 +35,12 @@ public class HornBlockEntity extends SmartBlockEntity {
         if (!level.isClientSide) return;
 
         boolean powered = getPowered();
-        DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> this.tickSound(note, powered));
+        this.tickSound(note, powered);
     }
 
-    @OnlyIn(Dist.CLIENT)
+    // Client-only at runtime: only reached behind the level.isClientSide guard above.
     protected HornSoundInstance soundInstance;
-    @OnlyIn(Dist.CLIENT)
+
     protected void tickSound(int note, boolean powered) {
         if (!powered) {
             if (soundInstance != null) {
@@ -57,18 +54,13 @@ public class HornBlockEntity extends SmartBlockEntity {
         if (soundInstance == null || soundInstance.isStopped() || soundInstance.getNote() != note) {
             Minecraft.getInstance()
                 .getSoundManager()
-                .play(soundInstance = new HornSoundInstance(
-                        note,
-                        this.getBlockPos(),
-                        VSGameUtilsKt.getLoadedShipManagingPos(this.level, this.getBlockPos())
-                ));
+                .play(soundInstance = new HornSoundInstance(note, this.getBlockPos()));
         }
 
         soundInstance.keepAlive();
         soundInstance.setPitch(pitch);
     }
 
-    @OnlyIn(Dist.CLIENT)
     protected void tickSound() {
         playOverrideTicks = 7;
         this.tickSound(this.note, true);
@@ -83,14 +75,14 @@ public class HornBlockEntity extends SmartBlockEntity {
     }
 
     @Override
-    protected void write(CompoundTag tag, boolean clientPacket) {
-        super.write(tag, clientPacket);
+    protected void write(CompoundTag tag, HolderLookup.Provider registries, boolean clientPacket) {
+        super.write(tag, registries, clientPacket);
         tag.putInt("Note", this.note);
     }
 
     @Override
-    protected void read(CompoundTag tag, boolean clientPacket) {
-        super.read(tag, clientPacket);
+    protected void read(CompoundTag tag, HolderLookup.Provider registries, boolean clientPacket) {
+        super.read(tag, registries, clientPacket);
         if (tag.contains("Note")) {
             this.note = Mth.clamp(tag.getInt("Note"), 0, PITCH_RANGE-1);
         }

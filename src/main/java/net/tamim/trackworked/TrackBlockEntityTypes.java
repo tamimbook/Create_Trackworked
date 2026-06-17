@@ -11,7 +11,7 @@ import net.tamim.trackworked.tracks.render.PhysEntityTrackRenderer;
 import net.tamim.trackworked.tracks.render.SimpleWheelRenderer;
 import net.tamim.trackworked.tracks.render.SuspensionRenderer;
 
-import static net.tamim.trackworked.TrackworkMod.REGISTRATE;
+import static net.tamim.trackworked.TrackworkedMod.REGISTRATE;
 
 public class TrackBlockEntityTypes {
     // TODO: Instance shaders (I obviously don't know glsl :clueless:)

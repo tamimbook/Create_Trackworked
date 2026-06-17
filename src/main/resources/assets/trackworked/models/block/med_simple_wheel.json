@@ -5,8 +5,8 @@
 	"render_type": "minecraft:cutout",
 	"texture_size": [32, 32],
 	"textures": {
-		"6": "trackwork:block/med_tyre",
-		"particle": "trackwork:block/med_tyre"
+		"6": "trackworked:block/med_tyre",
+		"particle": "trackworked:block/med_tyre"
 	},
 	"elements": [
 		{

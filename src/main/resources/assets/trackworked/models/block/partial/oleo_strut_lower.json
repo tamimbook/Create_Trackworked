@@ -3,7 +3,7 @@
 	"parent": "block/block",
 	"texture_size": [64, 64],
 	"textures": {
-		"2": "trackwork:block/spring"
+		"2": "trackworked:block/spring"
 	},
 	"elements": [
 		{

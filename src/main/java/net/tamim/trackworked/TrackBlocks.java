@@ -33,7 +33,7 @@ import org.jetbrains.annotations.NotNull;
 import static com.simibubi.create.foundation.data.ModelGen.customItemModel;
 import static com.simibubi.create.foundation.data.TagGen.axeOrPickaxe;
 import static com.simibubi.create.foundation.data.TagGen.pickaxeOnly;
-import static net.tamim.trackworked.TrackworkMod.REGISTRATE;
+import static net.tamim.trackworked.TrackworkedMod.REGISTRATE;
 
 public class TrackBlocks {
     static {

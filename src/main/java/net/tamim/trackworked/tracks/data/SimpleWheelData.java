@@ -1,19 +1,11 @@
 package net.tamim.trackworked.tracks.data;
 
-import com.fasterxml.jackson.annotation.JsonAutoDetect;
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import net.minecraft.core.Direction;
 import org.joml.Vector3d;
 import org.joml.Vector3dc;
-import org.valkyrienskies.core.api.util.PhysTickOnly;
 
 import javax.annotation.Nullable;
 
-@JsonAutoDetect(
-        fieldVisibility = JsonAutoDetect.Visibility.ANY
-)
-@JsonIgnoreProperties(ignoreUnknown = true)
 public class SimpleWheelData {
     public final Vector3dc wheelOriginPosition;
     public final Vector3dc wheelContactPosition;
@@ -26,14 +18,8 @@ public class SimpleWheelData {
     public float wheelRPM;
 
     public float trackSU;
-    @PhysTickOnly
     @Nullable
     public Vector3dc lastSuspensionForce;
-
-    // For Jackson serialisation
-    private SimpleWheelData() {
-        this(null);
-    }
 
     private SimpleWheelData(Vector3dc wheelOriginPosition) {
         this.wheelOriginPosition = wheelOriginPosition;

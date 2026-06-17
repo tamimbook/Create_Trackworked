@@ -1,27 +1,24 @@
 package net.tamim.trackworked.client;
 
 import net.tamim.trackworked.TrackSounds;
+import net.tamim.trackworked.physics.SableShips;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.resources.sounds.AbstractTickableSoundInstance;
 import net.minecraft.client.resources.sounds.SoundInstance;
 import net.minecraft.core.BlockPos;
 import net.minecraft.sounds.SoundSource;
-import org.joml.Vector3dc;
-import org.valkyrienskies.core.api.ships.Ship;
+import net.minecraft.world.phys.Vec3;
 
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-
-import static org.valkyrienskies.mod.common.util.VectorConversionsMCKt.toJOML;
 
 public class HornSoundInstance extends AbstractTickableSoundInstance {
     private boolean playing;
     private int ticksLeft;
-    private int note;
+    private final int note;
 
-    private @Nonnull BlockPos anchorPos;
-    private @Nullable Ship ship;
+    private final @Nonnull BlockPos anchorPos;
 
-    public HornSoundInstance(int note, BlockPos pos, @Nullable Ship ship) {
+    public HornSoundInstance(int note, BlockPos pos) {
         super(TrackSounds.HORN.get(), SoundSource.RECORDS, SoundInstance.createUnseededRandom());
         this.note = note;
         looping = true;
@@ -30,25 +27,22 @@ public class HornSoundInstance extends AbstractTickableSoundInstance {
         delay = 0;
         this.keepAlive();
         this.anchorPos = pos;
-        Vector3dc worldPos = toJOML(pos.getCenter());
-        if (ship != null) {
-            worldPos = ship.getShipToWorld().transformPosition(toJOML(anchorPos.getCenter()));
-        }
-        x = worldPos.x();
-        y = worldPos.y();
-        z = worldPos.z();
-        this.ship = ship;
+        Vec3 center = pos.getCenter();
+        x = center.x;
+        y = center.y;
+        z = center.z;
     }
 
     @Override
     public void tick() {
-        if (ship != null) {
-            Vector3dc worldPos = ship.getShipToWorld().transformPosition(toJOML(anchorPos.getCenter()));
-            x = worldPos.x();
-            y = worldPos.y();
-            z = worldPos.z();
+        // Track the host sub-level's pose so the horn follows a moving vehicle.
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.level != null) {
+            Vec3 world = SableShips.toWorldCoordinates(mc.level, anchorPos.getCenter());
+            x = world.x;
+            y = world.y;
+            z = world.z;
         }
-
         if (playing) {
             volume = Math.min(1, volume + .5f);
             this.ticksLeft--;

@@ -1,6 +1,6 @@
 {
 	"credit": "Made with Blockbench",
-	"parent": "trackwork:block/wheels",
+	"parent": "trackworked:block/wheels",
 	"texture_size": [32, 32],
 	"textures": {
 		"0": "create:block/axis",

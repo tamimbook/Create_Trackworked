@@ -9,7 +9,7 @@ import org.jetbrains.annotations.NotNull;
 public class TrackPonderPlugin implements PonderPlugin {
     @Override
     public String getModId() {
-        return TrackworkMod.MOD_ID;
+        return TrackworkedMod.MOD_ID;
     }
     @Override
     public void registerScenes(@NotNull PonderSceneRegistrationHelper<ResourceLocation> helper) {

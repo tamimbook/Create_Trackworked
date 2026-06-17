@@ -3,9 +3,9 @@
 	"parent": "create:block/large_wheels",
 	"texture_size": [128, 128],
 	"textures": {
-		"3": "trackwork:block/tyre",
-		"4": "trackwork:block/girder",
-		"particle": "trackwork:block/tyre"
+		"3": "trackworked:block/tyre",
+		"4": "trackworked:block/girder",
+		"particle": "trackworked:block/tyre"
 	},
 	"elements": [
 		{

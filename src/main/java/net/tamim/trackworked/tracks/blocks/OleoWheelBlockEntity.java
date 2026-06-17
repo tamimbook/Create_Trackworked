@@ -4,48 +4,42 @@ import com.simibubi.create.foundation.blockEntity.SmartBlockEntity;
 import com.simibubi.create.foundation.blockEntity.behaviour.BlockEntityBehaviour;
 import com.simibubi.create.infrastructure.config.AllConfigs;
 import com.tterrag.registrate.builders.BlockEntityBuilder;
+import net.createmod.catnip.platform.CatnipServices;
 import net.tamim.trackworked.*;
-import net.tamim.trackworked.sounds.TrackSoundScapes;
+import net.tamim.trackworked.physics.SableShips;
 import net.tamim.trackworked.tracks.data.OleoWheelData;
 import net.tamim.trackworked.tracks.forces.OleoWheelController;
 import net.tamim.trackworked.tracks.network.OleoWheelPacket;
+import dev.ryanhcode.sable.api.block.BlockEntitySubLevelActor;
+import dev.ryanhcode.sable.api.physics.handle.RigidBodyHandle;
+import dev.ryanhcode.sable.sublevel.ServerSubLevel;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.core.particles.BlockParticleOption;
-import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.level.block.RenderShape;
+import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.fml.DistExecutor;
 import org.jetbrains.annotations.NotNull;
 import org.joml.Math;
 import org.joml.Vector3d;
 import org.joml.Vector3dc;
-import org.valkyrienskies.core.api.ships.LoadedServerShip;
-import org.valkyrienskies.core.api.ships.Ship;
-import org.valkyrienskies.core.impl.bodies.properties.BodyKinematicsImpl;
-import org.valkyrienskies.mod.common.VSGameUtilsKt;
 
 import java.util.List;
 import java.util.Random;
 import java.util.function.Supplier;
 
 import static net.tamim.trackworked.TrackSounds.SUSPENSION_CREAK;
-import static net.tamim.trackworked.TrackworkUtil.accumulatedVelocity;
-import static net.tamim.trackworked.tracks.forces.OleoWheelController.UP;
-import static org.valkyrienskies.mod.common.util.VectorConversionsMCKt.toJOML;
-import static org.valkyrienskies.mod.common.util.VectorConversionsMCKt.toMinecraft;
 
-public class OleoWheelBlockEntity extends SmartBlockEntity {
+public class OleoWheelBlockEntity extends SmartBlockEntity implements BlockEntitySubLevelActor {
     private float wheelRadius;
     private float suspensionTravel;
     private double suspensionScale;
@@ -66,12 +60,13 @@ public class OleoWheelBlockEntity extends SmartBlockEntity {
 
     private boolean isFreespin = true;
 
+    /** Server sub-level whose plot contains this block, or {@code null} when in the ordinary world. */
     @NotNull
-    protected final Supplier<Ship> ship;
+    protected final Supplier<ServerSubLevel> subLevel;
 
     public OleoWheelBlockEntity(BlockEntityType<?> typeIn, BlockPos pos, BlockState state) {
         super(typeIn, pos, state);
-        this.ship = () -> VSGameUtilsKt.getLoadedShipManagingPos(this.level, pos);
+        this.subLevel = () -> SableShips.getSubLevelManagingPos(this.level, pos);
         this.setLazyTickRate(10);
     }
 
@@ -95,9 +90,9 @@ public class OleoWheelBlockEntity extends SmartBlockEntity {
         super.remove();
 
         if (this.level != null && !this.level.isClientSide) {
-            LoadedServerShip ship = (LoadedServerShip)this.ship.get();
-            if (ship != null) {
-                OleoWheelController controller = OleoWheelController.getOrCreate(ship);
+            ServerSubLevel sub = this.subLevel.get();
+            if (sub != null) {
+                OleoWheelController controller = OleoWheelController.getOrCreate(sub);
                 controller.removeTrackBlock(this.getBlockPos());
             }
         }
@@ -107,49 +102,9 @@ public class OleoWheelBlockEntity extends SmartBlockEntity {
     public void tick() {
         super.tick();
 
-        // Ground particles
-        if (this.level.isClientSide && this.ship.get() != null) {
-            Vector3d pos = toJOML(Vec3.atBottomCenterOf(this.getBlockPos()));
-            Vector3dc ground = VSGameUtilsKt.getWorldCoordinates(this.level, this.getBlockPos(), pos.sub(UP.mul(this.wheelTravel * 1.2, new Vector3d())));
-            BlockPos blockpos = BlockPos.containing(toMinecraft(ground));
-            BlockState blockstate = this.level.getBlockState(blockpos);
-            if (blockstate.isSolid()) {
-                Ship s = this.ship.get();
-                Vector3dc reversedWheelVel = s.getShipTransform().getShipToWorldRotation().transform(
-                        TrackworkUtil.getForwardVec3d(this.getBlockState().getValue(OleoWheelBlock.AXLE_FACING).getAxis(), this.getWheelSpeed()));
-                if (Math.abs(this.getWheelSpeed()) > 64) {
-                    // Is this safe without calling BlockState::addRunningEffects?
-                    if (blockstate.getRenderShape() != RenderShape.INVISIBLE) {
-                        this.level.addParticle(new BlockParticleOption(
-                                        ParticleTypes.BLOCK, blockstate).setPos(blockpos),
-                                pos.x + (this.random.nextDouble() - 0.5D),
-                                pos.y + 0.25D,
-                                pos.z + (this.random.nextDouble() - 0.5D) * this.wheelRadius,
-                                reversedWheelVel.x() * -1.0D, 10.5D, reversedWheelVel.z() * -1.0D
-                        );
-                    }
-                }
-
-                // TODO: Slip sounds
-                DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> {
-                    float wheelSpeed = getWheelSpeed();
-                    float pitch = Mth.clamp((Math.abs(wheelSpeed) / 256f) + .45f, .85f, 3f);
-                    if (Math.abs(wheelSpeed) < 8)
-                        return;
-                    TrackSoundScapes.play(TrackAmbientGroups.WHEEL_GROUND_AMBIENT, worldPosition, pitch);
-
-                    Vector3dc shipSpeed = accumulatedVelocity(s.getTransform(),
-                            new BodyKinematicsImpl(
-                                    s.getVelocity(),
-                                    s.getAngularVelocity(),
-                                    s.getTransform()
-                            ), ground);
-                    float slip = (float) reversedWheelVel.negate(new Vector3d()).sub(shipSpeed).length();
-                    pitch = Mth.clamp((Math.abs(slip) / 10f) + .45f, .85f, 3f);
-                    TrackSoundScapes.play(TrackAmbientGroups.WHEEL_GROUND_SLIP, worldPosition, pitch);
-                });
-            }
-        }
+        // TODO(Phase D): client-side ground contact particles + wheel slip sounds. The Forge build
+        // sampled the VS2 ship pose (getWorldCoordinates) and ship velocity here. Rebuild against
+        // the Sable sub-level render pose.
 
         if (this.level.isClientSide) {
             this.prevWheelTravel = this.wheelTravel;
@@ -168,8 +123,8 @@ public class OleoWheelBlockEntity extends SmartBlockEntity {
         Direction strutDir = this.getBlockState().getValue(OleoWheelBlock.STRUT_FACING);
         double restOffset = this.wheelRadius - 0.5f;
         double susScaled = this.suspensionTravel * this.suspensionScale;
-        LoadedServerShip ship = (LoadedServerShip)this.ship.get();
-        if (ship != null) {
+        ServerSubLevel sub = this.subLevel.get();
+        if (sub != null) {
             boolean stowed = (strutDir != Direction.DOWN);
             if (stowed) {
                 this.steeringValue = 0;
@@ -185,7 +140,7 @@ public class OleoWheelBlockEntity extends SmartBlockEntity {
                         true,
                         null
                 );
-                OleoWheelController controller = OleoWheelController.getOrCreate(ship);
+                OleoWheelController controller = OleoWheelController.getOrCreate(sub);
                 this.suspensionScale = controller.updateTrackBlock(this.getBlockPos(), data);
 
                 this.prevWheelTravel = this.wheelTravel;
@@ -193,7 +148,7 @@ public class OleoWheelBlockEntity extends SmartBlockEntity {
                 return;
             }
 
-//                 Steering Control
+            // Steering Control
             int bestSignal = this.level.getSignal(this.getBlockPos().relative(axleDir), axleDir)
                     - this.level.getSignal(this.getBlockPos().relative(axleDir.getOpposite()), axleDir.getOpposite());
             float targetSteeringValue = bestSignal / 15f * ((axleDir.getAxisDirection() == Direction.AxisDirection.POSITIVE ? 1 : -1));
@@ -208,7 +163,7 @@ public class OleoWheelBlockEntity extends SmartBlockEntity {
             this.steeringValue = Mth.lerp(steeringSpeed, this.steeringValue, targetSteeringValue);
 
             float deltaSteeringValue = oldSteeringValue - this.steeringValue;
-            OleoWheelController controller = OleoWheelController.getOrCreate(ship);
+            OleoWheelController controller = OleoWheelController.getOrCreate(sub);
             OleoWheelData data = new OleoWheelData(
                     this.getBlockPos().asLong(),
                     this.getSteeringValue(),
@@ -239,11 +194,13 @@ public class OleoWheelBlockEntity extends SmartBlockEntity {
             }
 
             // Entity Damage
+            // TODO(Phase D): precise oriented-box collision against the sub-level pose. For the
+            // stubbed (stationary) wheel this uses a world-space AABB around the block.
             List<LivingEntity> hits = this.level.getEntitiesOfClass(LivingEntity.class, new AABB(this.getBlockPos())
                     .deflate(0.25)
                     .expandTowards(0, -1.5, 0)
             );
-            Vec3 worldPos = toMinecraft(ship.getShipToWorld().transformPosition(toJOML(Vec3.atCenterOf(this.getBlockPos()))));
+            Vec3 worldPos = Vec3.atCenterOf(this.getBlockPos());
             for (LivingEntity e : hits) {
                 SuspensionTrackBlockEntity.push(e, worldPos);
                 float speed = Math.abs(this.getWheelSpeed());
@@ -269,12 +226,13 @@ public class OleoWheelBlockEntity extends SmartBlockEntity {
     @Override
     public void lazyTick() {
         super.lazyTick();
-        if (!this.level.isClientSide && this.ship.get() != null) this.syncToClient();
+        if (!this.level.isClientSide && this.subLevel.get() != null) this.syncToClient();
     }
 
     protected void syncToClient() {
-        if (!this.level.isClientSide) TrackPackets.getChannel().send(packetTarget(),
-                new OleoWheelPacket(this.getBlockPos(), this.wheelTravel, this.getSteeringValue(), this.horizontalOffset));
+        if (this.level instanceof ServerLevel serverLevel)
+            CatnipServices.NETWORK.sendToClientsTrackingChunk(serverLevel, new ChunkPos(this.getBlockPos()),
+                    new OleoWheelPacket(this.getBlockPos(), this.wheelTravel, this.getSteeringValue(), this.horizontalOffset));
     }
 
     public Vector3d getTangentVecWithSteering(Direction.Axis axis, float length) {
@@ -287,32 +245,21 @@ public class OleoWheelBlockEntity extends SmartBlockEntity {
     }
 
     public float getWheelSpeed() {
-        if (this.isFreespin) {
-            Ship s = this.ship.get();
-            if (s != null) {
-                Vector3d vel = s.getVelocity().add(s.getOmega().cross(s.getShipToWorld().transformPosition(
-                        toJOML(Vec3.atBottomCenterOf(this.getBlockPos()))).sub(
-                        s.getTransform().getPositionInWorld()), new Vector3d()), new Vector3d()
-                );
-                Direction.Axis axis = this.getBlockState().getValue(OleoWheelBlock.AXLE_FACING).getAxis();
-                int sign = axis == Direction.Axis.X ? 1 : -1;
-                return sign * (float) TrackworkUtil.roundTowardZero(vel.dot(s.getShipToWorld()
-                        .transformDirection(this.getTangentVecWithSteering(axis, 1))) * 9.3f * 1 / wheelRadius);
-            }
-        }
+        // TODO(Phase D): when free-spinning, derive wheel RPM from the sub-level body velocity at the
+        // contact point (the VS2 build projected ship linear+angular velocity onto the wheel tangent).
         return 0;
     }
 
     @Override
-    public void write(CompoundTag compound, boolean clientPacket) {
+    public void write(CompoundTag compound, HolderLookup.Provider registries, boolean clientPacket) {
         compound.putFloat("WheelTravel", this.wheelTravel);
         compound.putFloat("HorizontalOffset", this.horizontalOffset);
         compound.putFloat("AxialOffset", this.axialOffset);
-        super.write(compound, clientPacket);
+        super.write(compound, registries, clientPacket);
     }
 
     @Override
-    protected void read(CompoundTag compound, boolean clientPacket) {
+    protected void read(CompoundTag compound, HolderLookup.Provider registries, boolean clientPacket) {
         if (clientPacket) {
             this.serverTargetWheelTravel = compound.getFloat("WheelTravel");
         } else {
@@ -323,7 +270,7 @@ public class OleoWheelBlockEntity extends SmartBlockEntity {
         }
         this.horizontalOffset = compound.getFloat("HorizontalOffset");
         this.axialOffset = compound.getFloat("AxialOffset");
-        super.read(compound, clientPacket);
+        super.read(compound, registries, clientPacket);
     }
 
     public float getWheelRadius() {
@@ -378,5 +325,12 @@ public class OleoWheelBlockEntity extends SmartBlockEntity {
         this.serverTargetWheelTravel = p.wheelTravel;
         this.steeringValue = p.steeringValue;
         this.horizontalOffset = p.horizontalOffset;
+    }
+
+    /** Sable physics hook: applies the oleo-strut suspension force each physics substep. */
+    @Override
+    public void sable$physicsTick(ServerSubLevel subLevel, RigidBodyHandle handle, double timeStep) {
+        if (!handle.isValid()) return;
+        OleoWheelController.getOrCreate(subLevel).physicsTick(subLevel, handle, this.getBlockPos(), timeStep);
     }
 }

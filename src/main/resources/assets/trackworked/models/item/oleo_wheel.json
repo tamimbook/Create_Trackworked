@@ -1,10 +1,10 @@
 {
   "loader": "forge:obj",
-  "model": "trackwork:models/item/oleo_wheel.obj",
+  "model": "trackworked:models/item/oleo_wheel.obj",
 	"textures": {
-		"0": "trackwork:block/spring",
-		"1": "trackwork:block/small_tire",
-		"particle": "trackwork:block/small_tire"
+		"0": "trackworked:block/spring",
+		"1": "trackworked:block/small_tire",
+		"particle": "trackworked:block/small_tire"
 	},
     "flip_v": true,
 	"display": {
