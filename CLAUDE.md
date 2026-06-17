@@ -2,9 +2,20 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Project Overview
+
+**Create: Trackworked** (`mod_id = trackworked`) is a NeoForge port of the Trackwork mod for **Minecraft 1.21.1**, built as a Create addon. It is **not** a generic mod template — it is an active codebase rebuilt on the **Sable physics engine** (`sable_version=1.2.2`, `sable_companion_version=1.6.0`), which replaces the original VS2 (Valkyrien Skies 2) physics backend.
+
+A VS2→Sable migration is in progress. Since Sable has no ship-attachment or serialization system, physics state that VS2 previously held as attachments is moving to BlockEntity NBT / SavedData (see the `TODO(Phase D - Sable physics)` marker in `TrackworkedMod`).
+
+**Key dependency versions** (from `gradle.properties`):
+- NeoForge `21.1.228`, Minecraft `1.21.1`, Parchment mappings `2024.11.17`
+- Create `6.0.10-280`, Catnip `0.8.39`, Ponder `1.0.85+mc1.21.1`, Flywheel `1.0.6`
+- Registrate `MC1.21-1.3.0+67` (resolves from `maven.ithundxr.dev/snapshots`, also JarJar'd in Create)
+
 ## Development Commands
 
-This is a NeoForge mod template for Minecraft 1.21.1 using Gradle.
+This is a NeoForge mod for Minecraft 1.21.1 using Gradle.
 
 **Common Gradle tasks (use `./gradlew` on Unix or `gradlew.bat` on Windows):**
 
@@ -28,42 +39,43 @@ Since this template does not include unit tests by default, the primary test mec
 
 ## Code Architecture & Structure
 
-**Mod Entry Point:**
-- `src/main/java/net/tamim/trackworked/TrackworkMod.java` - Main mod class annotated with `@Mod`. Handles event registration, mod initialization, and registration of deferred objects.
+All source lives under `src/main/java/net/tamim/trackworked/`.
+
+**Mod Entry Points (two `@Mod` classes):**
+- `TrackworkedMod.java` — common entry point, `@Mod(TrackworkedMod.MODID)`. Holds `MODID = "trackworked"` (with a legacy `MOD_ID` alias) and the shared `CreateRegistrate REGISTRATE`. The constructor wires up Registrate event listeners and calls each registrar's `register(...)`. This is the merged successor of the old Forge `TrackworkMod` entry point (now deleted).
+- `TrackworkedModClient.java` — client-only entry point, `@Mod(value = TrackworkedMod.MODID, dist = Dist.CLIENT)`. Registers the in-game config screen (`IConfigScreenFactory`), partial models, sprite shifts, and the Ponder plugin. Safe place for client-only Create/Flywheel/Ponder code.
 
 **Registration System:**
-- The mod uses NeoForge's `DeferredRegister` system for type-safe, lazy registration of game objects:
-  - `BLOCKS` - Registers blocks (see `EXAMPLE_BLOCK`).
-  - `ITEMS` - Registers items (see `EXAMPLE_BLOCK_ITEM` and `EXAMPLE_ITEM`).
-  - `CREATIVE_MODE_TABS` - Registers creative mode tabs (see `EXAMPLE_TAB`).
-- Objects are registered in the mod constructor via the mod event bus (`modEventBus.addListener`).
+- Registration goes through **Create's `CreateRegistrate`** (`TrackworkedMod.REGISTRATE`), not raw NeoForge `DeferredRegister`. Tooltip styling uses the Create `STANDARD_CREATE` palette.
+- Top-level registrar classes, each invoked from `TrackworkedMod`'s constructor:
+  - `TrackBlocks` / `TrackworkItems` / `TrackBlockEntityTypes` / `TrackEntityTypes` — game-object registration (`register()`).
+  - `TrackCreativeTabs` / `TrackSounds` — take the `IEventBus` (`register(IEventBus)`).
+  - `TrackPackets` — network payload registration (`register()`).
+  - `TrackworkConfigs` — config registration (`register(ModContainer)`).
+  - `TrackDamageTypes`, `TrackDamageSources`, `TrackAmbientGroups` — supporting registries/data.
+  - `TrackPonderPlugin` / `TrackPonders` — Ponder scene registration (client).
+
+**Tracks / Physics package** (`tracks/`):
+- `tracks/blocks/` — track & wheel blocks and block entities (`TrackBaseBlock(Entity)`, `WheelBlock(Entity)`, `OleoWheelBlock(Entity)`, `PhysEntityTrackBlock(Entity)`, `SuspensionTrackBlock(Entity)`), plus `blocks/variants/` for Med/Large size variants.
+- `tracks/forces/` — physics controllers that apply Sable forces: `PhysicsTrackController`, `PhysEntityTrackController`, `OleoWheelController`, `SimpleWheelController`, and `TrackPhysics`.
+- `tracks/data/` — per-block data carriers (`PhysTrackData`, `PhysEntityTrackData`, `OleoWheelData`, `SimpleWheelData`).
+- `tracks/network/` — packets (`SimpleWheelPacket`, `OleoWheelPacket`, `SuspensionWheelPacket`, `ThrowTrackPacket`).
+- `tracks/render/` — renderers (`SimpleWheelRenderer`, `OleoWheelRenderer`, `SuspensionRenderer`, `PhysEntityTrackRenderer`, `TrackBeltRenderer`).
+- `tracks/ITrackPointProvider.java`, `tracks/TrackPonderScenes.java`.
 
 **Configuration:**
-- `src/main/java/net/tamim/trackworked/Config.java` - Example configuration class using NeoForge's `ModConfigSpec`.
-- Demonstrates boolean, integer, string, and list config values with validation.
-- Automatically synced to `trackworked-common.toml` in the instance's config folder.
+- `TrackworkConfigs.java` — built on Catnip's `ConfigBase` (not raw `ModConfigSpec`), with `TServer` / `TClient` inner classes. Exposes settings like `enableTrackStress`, `stressMultiplier`, `maxTrackRPM`, `enableTrackThrow`, `wheelPairDistance`, `wheelRPMPassthrough`. Registered via `register(ModContainer)` and surfaced through the NeoForge in-game config screen.
 
 **Resources:**
-- `src/main/resources/assets/trackworked/lang/en_us.json` - English localization file.
-- `src/main/resources/META-INF/neoforge.mods.toml` - Mod metadata (mod ID, version, dependencies, etc.) used by NeoForge for loading.
-- Generated resources from data generators (if used) appear in `src/generated/resources` and are automatically included in the build.
-
-**Event Handling:**
-- The mod subscribes to lifecycle events (`FMLCommonSetupEvent`, `ServerStartingEvent`) and registry events (`BuildCreativeModeTabContentsEvent`).
-- Event bus registration occurs in the constructor: `NeoForge.EVENT_BUS.register(this)` for the mod bus, and `modEventBus.addListener` for the mod-specific bus.
-
-**Typical Workflow:**
-1. Add new blocks/items by creating `DeferredBlock`/`DeferredItem` fields and registering them in the respective `DeferredRegister`.
-2. Add localized names to `assets/trackworked/lang/en_us.json` (or other language files).
-3. For complex items/blocks, create classes that extend the base vanilla classes and reference them in the deferred registrations.
-4. Adjust `neoforge.mods.toml` if changing mod ID, version, or adding dependencies.
-5. Run `runClient` or `runServer` to test changes in a development environment.
+- `src/main/resources/assets/trackworked/lang/en_us.json` — English localization.
+- `src/main/resources/META-INF/neoforge.mods.toml` — mod metadata.
+- Generated resources from data generators land in `src/generated/resources` (gathered via `TrackDatagen::gatherData`, registered on the mod bus at `EventPriority.LOWEST`).
 
 **Important Notes:**
 - The mod targets Java 21; ensure the JDK is set accordingly.
 - Mappings are configured via Parchment (see `gradle.properties` for versions).
 - The `mod_id` must match across:
-  - The `@Mod` annotation value (`TrackworkMod.MODID`).
+  - The `@Mod` annotation value (`TrackworkedMod.MODID`).
   - The `mod_id` property in `gradle.properties`.
   - The mod entry in `neoforge.mods.toml`.
   - The namespace used in resource paths (`assets/<mod_id>/...`).

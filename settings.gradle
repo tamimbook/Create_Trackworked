@@ -7,7 +7,6 @@ pluginManagement {
 
 plugins {
     id 'org.gradle.toolchains.foojay-resolver-convention' version '1.0.0'
-    // REMOVED: net.neoforged.moddev.repositories plugin line
 }
 
 dependencyResolutionManagement {
@@ -38,7 +37,6 @@ dependencyResolutionManagement {
                 }
             }
             filter {
-                // FIX: Matches dev.ryanhcode, dev.ryanhcode.sable, dev.ryanhcode.sable-companion, etc.
                 includeGroupByRegex("dev\\.ryanhcode.*")
             }
         }
@@ -71,9 +69,11 @@ dependencyResolutionManagement {
 
         exclusiveContent {
             forRepository {
+                // Registrate's MC1.21 line is published here (the legacy tterrag Maven only carries
+                // up to MC1.20). This is the official host for Create 1.21.1's Registrate build.
                 maven {
-                    url = "https://maven.tterrag.com"
-                    name = "Tterrag Maven"
+                    url = "https://maven.ithundxr.dev/snapshots"
+                    name = "iThundxr Maven (Registrate)"
                 }
             }
             filter {
