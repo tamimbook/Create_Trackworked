@@ -26,7 +26,7 @@ sourceSets.main.resources {
     exclude("src/generated/**/.cache") // datagen cache files
 }
 
-//repositories {}
+//repositories {} blocked for buildscript repositories, see settings.gradle
 
 base {
     archivesName = mod_id
@@ -144,10 +144,17 @@ dependencies {
     // We use compileOnly for source compilation and localRuntime so the mod jar is
     // present in the development runtime without publishing it transitively.
     compileOnly "com.simibubi.create:create-${project.minecraft_version}:${project.create_version}"
-    localRuntime "com.simibubi.create:create-${project.minecraft_version}:${project.create_version}"
+    localRuntime("com.simibubi.create:create-${project.minecraft_version}:${project.create_version}") {
+        // Optional Create integrations that are not needed for Trackworked dev runtime.
+        exclude group: 'info.journeymap', module: 'journeymap-api-neoforge'
+        exclude group: 'cc.tweaked', module: 'cc-tweaked-1.21.1-forge'
+    }
 
     compileOnly "net.createmod.catnip:Catnip-Common-${project.minecraft_version}:${project.catnip_version}"
-    localRuntime "net.createmod.catnip:Catnip-Common-${project.minecraft_version}:${project.catnip_version}"
+    localRuntime("net.createmod.catnip:Catnip-Common-${project.minecraft_version}:${project.catnip_version}") {
+        // Optional Catnip config-list integration; Trackworked does not use this API directly.
+        exclude group: 'fuzs.forgeconfigapiport', module: 'forgeconfigapiport-common-neoforgeapi'
+    }
 
     compileOnly "net.createmod.ponder:ponder-neoforge:${project.ponder_version}"
     localRuntime "net.createmod.ponder:ponder-neoforge:${project.ponder_version}"

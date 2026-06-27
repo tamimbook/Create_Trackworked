@@ -1,22 +1,14 @@
 package net.tamim.trackworked;
 
-import com.simibubi.create.AllBlocks;
 import com.simibubi.create.AllCreativeModeTabs;
-import com.simibubi.create.foundation.data.CreateRegistrate;
-import com.tterrag.registrate.util.entry.RegistryEntry;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.item.CreativeModeTab;
-import net.minecraft.world.item.Item;
-import net.minecraft.world.level.block.Block;
 import net.neoforged.bus.api.IEventBus;
-import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
-import static net.tamim.trackworked.TrackworkedMod.REGISTRATE;
 import static net.minecraft.network.chat.Component.translatable;
 
-@EventBusSubscriber(modid = TrackworkedMod.MODID)
 public class TrackCreativeTabs {
     private static final DeferredRegister<CreativeModeTab> REGISTER =
             DeferredRegister.create(Registries.CREATIVE_MODE_TAB, TrackworkedMod.MODID);
@@ -26,15 +18,33 @@ public class TrackCreativeTabs {
                     .title(translatable("itemGroup.trackwork"))
                     .icon(TrackBlocks.SIMPLE_WHEEL_PART::asStack)
                     .displayItems((displayParams, output) -> {
-                        for (RegistryEntry<Block, Block> entry : REGISTRATE.getAll(Registries.BLOCK)) {
-                            if (CreateRegistrate.isInCreativeTab(entry, AllCreativeModeTabs.BASE_CREATIVE_TAB))
-                                output.accept(entry.get().asItem());
-                        }
-
-                        for (RegistryEntry<Item, Item> entry : REGISTRATE.getAll(Registries.ITEM)) {
-                            if (CreateRegistrate.isInCreativeTab(entry, AllCreativeModeTabs.BASE_CREATIVE_TAB))
-                                output.accept(entry.get());
-                        }
+                        // Add all items and blocks manually
+                        output.accept(TrackworkItems.TRACK_TOOL_KIT.get());
+                        
+                        // Tracks
+                        output.accept(TrackBlocks.LARGE_SUSPENSION_TRACK.get());
+                        output.accept(TrackBlocks.MED_SUSPENSION_TRACK.get());
+                        output.accept(TrackBlocks.SUSPENSION_TRACK.get());
+                        output.accept(TrackBlocks.LARGE_PHYS_TRACK.get());
+                        output.accept(TrackBlocks.MED_PHYS_TRACK.get());
+                        output.accept(TrackBlocks.PHYS_TRACK.get());
+                        
+                        // Wheels
+                        output.accept(TrackBlocks.LARGE_SIMPLE_WHEEL.get());
+                        output.accept(TrackBlocks.MED_SIMPLE_WHEEL.get());
+                        output.accept(TrackBlocks.SIMPLE_WHEEL.get());
+                        output.accept(TrackBlocks.SMALL_SIMPLE_WHEEL.get());
+                        output.accept(TrackBlocks.OLEO_WHEEL.get());
+                        
+                        // Wheel parts
+                        output.accept(TrackBlocks.LARGE_SIMPLE_WHEEL_PART.get());
+                        output.accept(TrackBlocks.MED_SIMPLE_WHEEL_PART.get());
+                        output.accept(TrackBlocks.SIMPLE_WHEEL_PART.get());
+                        output.accept(TrackBlocks.SMALL_SIMPLE_WHEEL_PART.get());
+                        
+                        // Other
+                        output.accept(TrackBlocks.TRACK_LEVEL_CONTROLLER.get());
+                        output.accept(TrackBlocks.HORN.get());
                     })
                     .build());
 

@@ -1,6 +1,5 @@
 package net.tamim.trackworked;
 
-import com.simibubi.create.AllCreativeModeTabs;
 import com.simibubi.create.foundation.data.AssetLookup;
 import com.tterrag.registrate.util.entry.ItemEntry;
 import net.tamim.trackworked.items.TrackToolkit;
@@ -8,10 +7,6 @@ import net.tamim.trackworked.items.TrackToolkit;
 import static net.tamim.trackworked.TrackworkedMod.REGISTRATE;
 
 public class TrackworkItems {
-    static {
-        REGISTRATE.setCreativeTab(AllCreativeModeTabs.BASE_CREATIVE_TAB);
-    }
-
     public static final ItemEntry<TrackToolkit> TRACK_TOOL_KIT =
             REGISTRATE.item("track_tool_kit", TrackToolkit::new)
                     .properties(p -> p.stacksTo(1))

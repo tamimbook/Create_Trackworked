@@ -1,6 +1,5 @@
 package net.tamim.trackworked;
 
-import com.simibubi.create.AllCreativeModeTabs;
 import com.simibubi.create.AllShapes;
 import com.simibubi.create.content.kinetics.chainDrive.ChainDriveGenerator;
 import com.simibubi.create.content.kinetics.simpleRelays.BracketedKineticBlockModel;
@@ -36,10 +35,6 @@ import static com.simibubi.create.foundation.data.TagGen.pickaxeOnly;
 import static net.tamim.trackworked.TrackworkedMod.REGISTRATE;
 
 public class TrackBlocks {
-    static {
-        REGISTRATE.setCreativeTab(AllCreativeModeTabs.BASE_CREATIVE_TAB);
-    }
-
     // TODO: More Freeform Rigid tracks (like a massive wall of blocks)
     // TODO: Suspension model?
 
@@ -204,3 +199,4 @@ public class TrackBlocks {
     
     public static void register() {}
 }
+

@@ -28,6 +28,34 @@ dependencyResolutionManagement {
             url = 'https://libraries.minecraft.net'
             name = 'Mojang Minecraft Libraries'
         }
+        maven {
+            url = 'https://maven.architectury.dev/'
+            name = 'Architectury Maven'
+        }
+        maven {
+            url = 'https://maven.blamejared.com/'
+            name = 'BlameJared Maven'
+        }
+        maven {
+            url = 'https://api.modrinth.com/maven'
+            name = 'Modrinth Maven'
+        }
+        maven {
+            url = 'https://maven.ftb.dev/releases'
+            name = 'FTB Maven'
+        }
+        maven {
+            url = 'https://jm.gserv.me/maven'
+            name = 'JourneyMap Maven'
+        }
+        maven {
+            url = 'https://maven.theillusivec4.top/'
+            name = 'Curios Maven'
+        }
+        maven {
+            url = 'https://maven.squiddev.cc/'
+            name = 'CC:Tweaked Maven'
+        }
 
         exclusiveContent {
             forRepository {
